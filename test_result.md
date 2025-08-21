@@ -106,15 +106,18 @@ user_problem_statement: "Implement Phase 4 AI Assist per roadmap: rewrite bullet
 backend:
   - task: "Add AI Assist endpoints (/api/ai/rewrite-bullets, /api/ai/lint, /api/ai/suggest-keywords)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Implemented endpoints with emergentintegrations client and heuristic fallbacks. Added EMERGENT_LLM_KEY to backend/.env and emergentintegrations to requirements.txt."
+      - working: true
+        agent: "testing"
+        comment: "✅ All Phase 4 AI Assist endpoints tested successfully. POST /api/ai/rewrite-bullets returns correct shape {improved_bullets:[], tips:[]} with 200 status. POST /api/ai/lint returns correct shape {issues:[], suggestions:[]} with expected issue types (passive/filler) with 200 status. POST /api/ai/suggest-keywords returns correct shape {synonyms:{}, prioritize:[]} with 200 status. Heuristic fallbacks working correctly when LLM unavailable. All existing endpoints (/api/jd/parse, /api/jd/coverage) still functioning properly. emergentintegrations dependency properly added to requirements.txt."
 metadata:
   created_by: "main_agent"
   version: "1.0"
