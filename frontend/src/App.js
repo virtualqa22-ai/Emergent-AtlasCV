@@ -333,6 +333,29 @@ function Home() {
         </CardHeader>
         <CardContent>
           <Textarea className="mt-1" rows={5} value={form.summary} onChange={(e) => handleChange("summary", e.target.value)} placeholder="2–3 lines capturing scope, years, domains, and top skills relevant to the role." />
+          <div className="mt-2 flex items-center gap-2">
+            <Button variant="outline" onClick={lintSummaryAI} disabled={!form.summary?.trim() || lintSummary.loading}>
+              {lintSummary.loading ? "Linting..." : "Lint with AI"}
+            </Button>
+          </div>
+          {lintSummary.issues?.length > 0 && (
+            <div className="mt-2 text-xs text-slate-700">
+              <div className="font-medium">Issues</div>
+              <ul className="list-disc pl-5">
+                {lintSummary.issues.map((i, idx) => (
+                  <li key={idx}><span className="font-semibold">{i.type}:</span> {i.message} {i.suggestion ? `– ${i.suggestion}` : ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {lintSummary.suggestions?.length > 0 && (
+            <div className="mt-2 text-xs text-slate-700">
+              <div className="font-medium">Suggestions</div>
+              <ul className="list-disc pl-5">
+                {lintSummary.suggestions.map((s, idx) => (<li key={idx}>{s}</li>))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     ),
