@@ -121,7 +121,7 @@ def compute_heuristic_score(resume: Resume) -> Dict[str, Any]:
         score -= 10
     # Bullet quality naive check
     bullet_len = sum(len(b) for e in resume.experience for b in e.bullets)
-    if bullet_len &lt; 100:
+    if bullet_len < 100:
         hints.append("Add quantified bullet points under experience.")
         score -= 10
     score = max(0, min(100, score))
