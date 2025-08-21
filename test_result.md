@@ -112,28 +112,35 @@ backend:
     priority: "high"
     needs_retesting: false
     status_history:
-      - working: false
-        agent: "main"
-        comment: "Implemented endpoints with emergentintegrations client and heuristic fallbacks. Added EMERGENT_LLM_KEY to backend/.env and emergentintegrations to requirements.txt."
       - working: true
         agent: "testing"
-        comment: "✅ All Phase 4 AI Assist endpoints tested successfully. POST /api/ai/rewrite-bullets returns correct shape {improved_bullets:[], tips:[]} with 200 status. POST /api/ai/lint returns correct shape {issues:[], suggestions:[]} with expected issue types (passive/filler) with 200 status. POST /api/ai/suggest-keywords returns correct shape {synonyms:{}, prioritize:[]} with 200 status. Heuristic fallbacks working correctly when LLM unavailable. All existing endpoints (/api/jd/parse, /api/jd/coverage) still functioning properly. emergentintegrations dependency properly added to requirements.txt."
+        comment: "All AI endpoints passed tests with valid JSON responses and fallbacks. Existing endpoints intact."
+frontend:
+  - task: "Wire minimal AI UI (Rewrite with AI, Lint with AI, Suggest synonyms)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added buttons and client logic calling /api endpoints, loading states and result rendering."
 metadata:
   created_by: "main_agent"
   version: "1.0"
   test_sequence: 2
-  run_ui: false
+  run_ui: true
 
 test_plan:
   current_focus:
-    - "Backend AI endpoints happy-path JSON shapes"
-    - "Heuristic fallback when LLM unavailable"
+    - "Frontend: verify AI buttons trigger backend and update UI"
+    - "Regression: JD parse/coverage still render"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Please test the three new AI endpoints for basic functionality and schema. Use small sample inputs. No frontend testing yet."
-  - agent: "testing"
-    message: "✅ Phase 4 AI Assist backend testing completed successfully. All 3 new AI endpoints working correctly with proper JSON response shapes. Heuristic fallbacks functioning as expected. Existing endpoints remain stable. No critical issues found. Backend implementation is ready for production use."
+    message: "Please run automated frontend tests to click 'Rewrite with AI', 'Lint with AI', and 'Suggest synonyms' flows and validate UI updates."
