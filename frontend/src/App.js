@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search } from "lucide-react";
+import { Progress } from "./components/ui/progress";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -112,6 +113,26 @@ function Home() {
 
   const scoreColor = useMemo(() => ats.score >= 80 ? "text-emerald-600" : ats.score >= 60 ? "text-amber-600" : "text-rose-600", [ats.score]);
 
+  const SectionRow = ({ label, sec }) => {
+    if (!sec) return null;
+    return (
+      <div className="mt-3">
+        <div className="flex items-center justify-between text-sm">
+          <span>{label}</span>
+          <span className="font-medium">{sec.coverage_percent}%</span>
+        </div>
+        <Progress value={sec.coverage_percent} className="h-2 mt-1" />
+        {sec.missing?.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {sec.missing.slice(0, 10).map((k, i) => (
+              <span key={i} className="rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 text-xs">{k}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen atlas-gradient">
       <header className="sticky top-0 z-30 border-b header-blur bg-white/70">
@@ -204,15 +225,25 @@ function Home() {
               )}
               {coverage && (
                 <div className="text-sm mt-2">
-                  <div>Coverage: <span className="font-semibold">{coverage.coverage_percent}%</span></div>
-                  {coverage.missing.length > 0 && (
-                    <div className="mt-2">
-                      <div className="mb-1">Missing keywords:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {coverage.missing.map((k, i) => (<span key={i} className="rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 text-xs">{k}</span>))}
+                  <div className="mb-2">
+                    Coverage overall: <span className="font-semibold">{coverage.coverage_percent}%</span>
+                    {coverage.missing.length > 0 && (
+                      <div className="mt-2">
+                        <div className="mb-1">Missing overall:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {coverage.missing.map((k, i) => (<span key={i} className="rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 text-xs">{k}</span>))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <div className="mt-3">
+                    <div className="font-medium mb-1">Per-section coverage</div>
+                    <SectionRow label="Skills" sec={coverage.per_section?.skills} />
+                    <SectionRow label="Experience" sec={coverage.per_section?.experience} />
+                    <SectionRow label="Projects" sec={coverage.per_section?.projects} />
+                    <SectionRow label="Summary" sec={coverage.per_section?.summary} />
+                    <SectionRow label="Education" sec={coverage.per_section?.education} />
+                  </div>
                 </div>
               )}
             </CardContent>

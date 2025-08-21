@@ -100,11 +100,18 @@ class CoverageInput(BaseModel):
     resume: Resume
     jd_keywords: List[str]
 
+class SectionCoverage(BaseModel):
+    coverage_percent: float
+    matched: List[str]
+    missing: List[str]
+    frequency: Dict[str, int]
+
 class CoverageResult(BaseModel):
     coverage_percent: float
     matched: List[str]
     missing: List[str]
     frequency: Dict[str, int]
+    per_section: Dict[str, SectionCoverage]
 
 # -----------------------
 # Minimal heuristic ATS score (no AI)
@@ -149,12 +156,16 @@ def compute_heuristic_score(resume: Resume) -> Dict[str, Any]:
 # JD parsing and coverage (heuristic)
 # -----------------------
 STOPWORDS = set("""
-a the and or for with of to in on by at from as is are be an – — & + / \n
+a the and or for with of to in on by at from as is are be an – — & + / \n we our you your plus
 """.split())
 
-STEM_PATTERNS = [
+# stronger stemming rules (simple suffix reductions)
+STEM_RULES = [
+    (re.compile(r"ies$"), "y"),
+    (re.compile(r"(xes|ses|zes|ches|shes)$"), "es"),  # leave base before removing 'es'
     (re.compile(r"ing$"), ""),
     (re.compile(r"ed$"), ""),
+    (re.compile(r"es$"), ""),
     (re.compile(r"s$"), ""),
 ]
 
@@ -167,11 +178,15 @@ ALIAS_MAP = {
     "node": ["nodejs", "node.js"],
     "aws": ["amazon web services"],
     "ml": ["machine learning"],
+    "api": ["apis"],
+    "rest": ["api", "apis"],
+    "python": ["py"],
 }
 
 def normalize_token(t: str) -> str:
     t = t.lower().strip()
-    for pat, repl in STEM_PATTERNS:
+    # collapse digits like 2024 or 3+ to keep as-is
+    for pat, repl in STEM_RULES:
         t = pat.sub(repl, t)
     return t
 
@@ -185,11 +200,14 @@ def expand_aliases(tokens: List[str]) -> List[str]:
                 expanded.add(base)
     return list(expanded)
 
+def tokenize(text: str) -> List[str]:
+    parts = [normalize_token(p) for p in COMMON_SPLIT.split((text or "").lower()) if p]
+    parts = [p for p in parts if p and p not in STOPWORDS and len(p) > 1]
+    return parts
+
 @api_router.post("/jd/parse", response_model=JDParseResult)
 async def parse_jd(input: JDParseInput):
-    raw = input.text.lower()
-    parts = [normalize_token(p) for p in COMMON_SPLIT.split(raw) if p]
-    parts = [p for p in parts if p and p not in STOPWORDS and len(p) > 1]
+    parts = tokenize(input.text)
     freq: Dict[str, int] = {}
     for p in parts:
         freq[p] = freq.get(p, 0) + 1
@@ -201,45 +219,74 @@ async def parse_jd(input: JDParseInput):
 
 @api_router.post("/jd/coverage", response_model=CoverageResult)
 async def jd_coverage(input: CoverageInput):
-    # Build resume text bag
     r = input.resume
-    text_chunks: List[str] = []
-    text_chunks.extend([r.summary or "", " ".join(r.skills or [])])
-    for e in r.experience:
-        text_chunks.extend([e.company, e.title, e.city, e.start_date or "", e.end_date or ""])
-        text_chunks.extend(e.bullets or [])
-    for ed in r.education:
-        text_chunks.extend([ed.institution, ed.degree, ed.details])
-    for p in r.projects:
-        text_chunks.extend([p.name, p.description, " ".join(p.tech or [])])
-    resume_text = " ".join([c for c in text_chunks if c])
-    tokens = [normalize_token(p) for p in COMMON_SPLIT.split(resume_text.lower()) if p]
-    tokens = [p for p in tokens if p and p not in STOPWORDS]
+    # Section texts
+    sections_text = {
+        "summary": r.summary or "",
+        "skills": " ".join(r.skills or []),
+        "experience": " ".join([" ".join([e.company, e.title, e.city, e.start_date or "", e.end_date or ""]) + " " + " ".join(e.bullets or []) for e in r.experience]),
+        "education": " ".join([" ".join([ed.institution, ed.degree, ed.details or ""]) for ed in r.education]),
+        "projects": " ".join([" ".join([p.name, p.description or "", " ".join(p.tech or [])]) for p in r.projects]),
+    }
 
-    bag: Dict[str, int] = {}
-    for t in tokens:
-        bag[t] = bag.get(t, 0) + 1
+    # Token bags per section
+    section_bags: Dict[str, Dict[str, int]] = {}
+    for sec, text in sections_text.items():
+        tokens = tokenize(text)
+        bag: Dict[str, int] = {}
+        for t in tokens:
+            bag[t] = bag.get(t, 0) + 1
+        section_bags[sec] = bag
 
+    # Overall bag
+    overall_bag: Dict[str, int] = {}
+    for bag in section_bags.values():
+        for t, c in bag.items():
+            overall_bag[t] = overall_bag.get(t, 0) + c
+
+    # Prepare JD keywords
     jd_norm = [normalize_token(k) for k in input.jd_keywords]
-    jd_norm = expand_aliases([k for k in jd_norm if k])
+    jd_norm = [k for k in jd_norm if k]
+    jd_norm = expand_aliases(jd_norm)
+    unique_jd = sorted(list(set(jd_norm)))
 
+    # Compute matches/missing overall
     matched: List[str] = []
     missing: List[str] = []
     frequency: Dict[str, int] = {}
-
-    for k in jd_norm:
-        count = bag.get(k, 0)
-        if count > 0:
+    for k in unique_jd:
+        cnt = overall_bag.get(k, 0)
+        if cnt > 0:
             matched.append(k)
-            frequency[k] = count
+            frequency[k] = cnt
         else:
             missing.append(k)
 
-    coverage = 0.0
-    if len(jd_norm) > 0:
-        coverage = round(100.0 * (len(matched) / len(jd_norm)), 1)
+    overall_cov = round(100.0 * (len(matched) / len(unique_jd),) if unique_jd else 0, 1)
 
-    return CoverageResult(coverage_percent=coverage, matched=sorted(list(set(matched))), missing=sorted(list(set(missing))), frequency=frequency)
+    # Per-section coverage
+    per_section: Dict[str, SectionCoverage] = {}
+    for sec, bag in section_bags.items():
+        sec_matched: List[str] = []
+        sec_missing: List[str] = []
+        sec_freq: Dict[str, int] = {}
+        for k in unique_jd:
+            c = bag.get(k, 0)
+            if c > 0:
+                sec_matched.append(k)
+                sec_freq[k] = c
+            else:
+                sec_missing.append(k)
+        cov = round(100.0 * (len(sec_matched) / len(unique_jd),) if unique_jd else 0, 1)
+        per_section[sec] = SectionCoverage(coverage_percent=cov, matched=sorted(list(set(sec_matched))), missing=sorted(list(set(sec_missing))), frequency=sec_freq)
+
+    return CoverageResult(
+        coverage_percent=overall_cov,
+        matched=sorted(list(set(matched))),
+        missing=sorted(list(set(missing))),
+        frequency=frequency,
+        per_section=per_section,
+    )
 
 # -----------------------
 # Routes
