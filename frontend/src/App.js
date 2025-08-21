@@ -393,9 +393,26 @@ function Home() {
               <div className="mt-3">
                 <Label>Bullets</Label>
                 {exp.bullets.map((b, bi) => (
-                  <Input key={bi} className="mt-2" value={b} onChange={(e) => {
-                    const copy = [...form.experience]; copy[idx].bullets[bi] = e.target.value; setForm({ ...form, experience: copy });
-                  }} placeholder="Impact-oriented bullet" />
+                  <div key={bi} className="mt-2 flex flex-col gap-1">
+                    <div className="flex gap-2">
+                      <Input value={b} onChange={(e) => {
+                        const copy = [...form.experience]; copy[idx].bullets[bi] = e.target.value; setForm({ ...form, experience: copy });
+                      }} placeholder="Impact-oriented bullet" />
+                      <Button variant="outline" onClick={() => rewriteBullet(idx, bi)} disabled={rewriting === keyFor(idx, bi)}>
+                        {rewriting === keyFor(idx, bi) ? "Rewriting..." : "Rewrite with AI"}
+                      </Button>
+                      <Button variant="ghost" onClick={() => lintBulletAI(idx, bi)} disabled={bulletLint[keyFor(idx, bi)]?.loading}>Lint</Button>
+                    </div>
+                    {bulletLint[keyFor(idx, bi)]?.issues?.length > 0 && (
+                      <div className="text-[11px] text-slate-700">
+                        <ul className="list-disc pl-5">
+                          {bulletLint[keyFor(idx, bi)].issues.map((ii, j) => (
+                            <li key={j}><span className="font-semibold">{ii.type}:</span> {ii.message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 <div className="mt-2 flex gap-2">
                   <Button variant="outline" onClick={() => { const copy = [...form.experience]; copy[idx].bullets.push(""); setForm({ ...form, experience: copy }); }}>Add bullet</Button>
