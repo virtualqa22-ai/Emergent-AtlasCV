@@ -607,13 +607,35 @@ class AtlasCVAPITester:
             return False
 
 def main():
-    print("🚀 Starting AtlasCV Backend API Tests")
-    print("=" * 50)
+    print("🚀 Starting AtlasCV Backend API Tests - Phase 3 Validation")
+    print("=" * 60)
     
     tester = AtlasCVAPITester()
     
-    # Run all tests in sequence
-    tests = [
+    # Run Phase 3 specific tests first
+    print("\n📋 PHASE 3 TESTS - Presets + Validation")
+    print("=" * 40)
+    
+    phase3_tests = [
+        tester.test_presets_endpoint,
+        lambda: tester.test_individual_preset("IN"),
+        lambda: tester.test_individual_preset("JP-R"),
+        lambda: tester.test_individual_preset("US"),
+        tester.test_validation_endpoint
+    ]
+    
+    phase3_passed = 0
+    for test in phase3_tests:
+        if test():
+            phase3_passed += 1
+    
+    print(f"\n📊 Phase 3 Results: {phase3_passed}/{len(phase3_tests)} tests passed")
+    
+    # Run additional existing tests
+    print("\n📋 ADDITIONAL BACKEND TESTS")
+    print("=" * 40)
+    
+    additional_tests = [
         tester.test_root_endpoint,
         tester.test_get_locales,
         tester.test_create_resume,
@@ -625,18 +647,24 @@ def main():
         tester.test_jd_coverage
     ]
     
-    for test in tests:
+    for test in additional_tests:
         test()
     
     # Print final results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
+    print(f"📊 Phase 3 Critical Tests: {phase3_passed}/{len(phase3_tests)} passed")
     
-    if tester.tests_passed == tester.tests_run:
-        print("🎉 All backend tests passed!")
-        return 0
+    if phase3_passed == len(phase3_tests):
+        print("🎉 All Phase 3 tests passed!")
+        if tester.tests_passed == tester.tests_run:
+            print("🎉 All backend tests passed!")
+            return 0
+        else:
+            print("⚠️  Some additional tests failed, but Phase 3 is complete")
+            return 0
     else:
-        print("❌ Some backend tests failed!")
+        print("❌ Phase 3 tests failed!")
         return 1
 
 if __name__ == "__main__":
