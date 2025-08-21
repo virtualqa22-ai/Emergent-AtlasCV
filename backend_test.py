@@ -411,7 +411,9 @@ def main():
         tester.test_score_resume,
         tester.test_update_resume,
         tester.test_get_resume,
-        tester.test_score_after_update
+        tester.test_score_after_update,
+        tester.test_jd_parse,
+        tester.test_jd_coverage
     ]
     
     for test in tests:
