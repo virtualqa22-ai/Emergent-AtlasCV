@@ -397,6 +397,215 @@ class AtlasCVAPITester:
         
         return False
 
+    def test_presets_endpoint(self):
+        """Test GET /api/presets endpoint - Phase 3 requirement"""
+        success, response = self.run_test(
+            "Get Presets",
+            "GET",
+            "presets",
+            200
+        )
+        
+        if success:
+            # Check if presets key exists
+            if "presets" not in response:
+                print("   ❌ Missing 'presets' key in response")
+                return False
+            
+            presets = response.get("presets", [])
+            expected_codes = {"US", "EU", "AU", "IN", "JP-R", "JP-S"}
+            actual_codes = {p.get("code") for p in presets}
+            
+            # Check all expected codes are present
+            missing_codes = expected_codes - actual_codes
+            if missing_codes:
+                print(f"   ❌ Missing preset codes: {missing_codes}")
+                return False
+            
+            print(f"   ✅ All preset codes found: {sorted(actual_codes)}")
+            
+            # Check each preset has required fields
+            all_fields_present = True
+            for preset in presets:
+                code = preset.get("code")
+                required_fields = ["date_format", "section_order", "label"]
+                
+                for field in required_fields:
+                    if field not in preset:
+                        print(f"   ❌ Preset {code} missing {field}")
+                        all_fields_present = False
+            
+            if all_fields_present:
+                print("   ✅ All presets have required fields (date_format, section_order, label)")
+            
+            return all_fields_present
+        
+        return False
+
+    def test_individual_preset(self, code):
+        """Test GET /api/presets/{code} endpoint"""
+        success, response = self.run_test(
+            f"Get Preset {code}",
+            "GET",
+            f"presets/{code}",
+            200
+        )
+        
+        if success:
+            # Check required fields
+            required_fields = ["code", "label", "date_format", "section_order"]
+            missing_fields = []
+            for field in required_fields:
+                if field not in response:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                print(f"   ❌ Missing fields: {missing_fields}")
+                return False
+            
+            print(f"   ✅ All required fields present")
+            
+            # Specific check for JP-R date format
+            if code == "JP-R":
+                expected_format = "YYYY/MM"
+                actual_format = response.get("date_format")
+                if actual_format != expected_format:
+                    print(f"   ❌ JP-R date format: expected {expected_format}, got {actual_format}")
+                    return False
+                else:
+                    print(f"   ✅ JP-R date format is correct: {expected_format}")
+            
+            return True
+        
+        return False
+
+    def test_validation_endpoint(self):
+        """Test POST /api/validate endpoint with various scenarios - Phase 3 requirement"""
+        print("\n🔍 Testing Validation Endpoint with specific scenarios...")
+        
+        # Test case 1: US resume missing state
+        us_resume = {
+            "locale": "US",
+            "contact": {
+                "full_name": "John Doe",
+                "email": "john@example.com",
+                "phone": "+1-555-123-4567",
+                "city": "New York",
+                "state": "",  # Missing state
+                "country": "USA"
+            },
+            "experience": [
+                {
+                    "id": "exp1",
+                    "company": "Tech Corp",
+                    "title": "Developer",
+                    "start_date": "2023-01",
+                    "end_date": "2024-01",
+                    "bullets": []
+                }
+            ],
+            "education": [],
+            "projects": [],
+            "skills": []
+        }
+        
+        success1 = self._test_validation_case("US resume missing state", us_resume, "state")
+        
+        # Test case 2: IN resume with phone missing country code
+        in_resume = {
+            "locale": "IN",
+            "contact": {
+                "full_name": "Raj Patel",
+                "email": "raj@example.com",
+                "phone": "98765",  # Missing + country code
+                "city": "Mumbai",
+                "state": "Maharashtra",
+                "country": "India"
+            },
+            "experience": [
+                {
+                    "id": "exp1",
+                    "company": "Indian Tech",
+                    "title": "Developer",
+                    "start_date": "2023-01",
+                    "end_date": "2024-01",
+                    "bullets": []
+                }
+            ],
+            "education": [],
+            "projects": [],
+            "skills": []
+        }
+        
+        success2 = self._test_validation_case("IN resume missing +country code", in_resume, "+")
+        
+        # Test case 3: JP-R resume with wrong date format
+        jp_resume = {
+            "locale": "JP-R",
+            "contact": {
+                "full_name": "Tanaka Hiroshi",
+                "email": "tanaka@example.com",
+                "phone": "+81-90-1234-5678",
+                "city": "Tokyo",
+                "country": "Japan"
+            },
+            "experience": [
+                {
+                    "id": "exp1",
+                    "company": "Japanese Corp",
+                    "title": "Engineer",
+                    "start_date": "2023-01",  # Should be 2023/01 for JP-R
+                    "end_date": "2024-01",
+                    "bullets": []
+                }
+            ],
+            "education": [],
+            "projects": [],
+            "skills": []
+        }
+        
+        success3 = self._test_validation_case("JP-R resume wrong date format", jp_resume, "YYYY/MM")
+        
+        return success1 and success2 and success3
+
+    def _test_validation_case(self, test_name, resume_data, expected_issue_keyword):
+        """Helper method to test a validation case"""
+        try:
+            payload = {"resume": resume_data}
+            success, response = self.run_test(
+                test_name,
+                "POST",
+                "validate",
+                200,
+                data=payload
+            )
+            
+            if not success:
+                return False
+            
+            # Check response structure
+            if "issues" not in response:
+                print(f"   ❌ Missing 'issues' key in response")
+                return False
+            
+            issues = response["issues"]
+            
+            # Check if expected issue is present
+            issue_found = any(expected_issue_keyword.lower() in issue.lower() for issue in issues)
+            
+            if not issue_found:
+                print(f"   ❌ Expected issue containing '{expected_issue_keyword}' not found")
+                print(f"   📄 Actual issues: {issues}")
+                return False
+            else:
+                print(f"   ✅ Found expected issue containing '{expected_issue_keyword}'")
+            
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ Error in {test_name}: {str(e)}")
+            return False
+
 def main():
     print("🚀 Starting AtlasCV Backend API Tests")
     print("=" * 50)
