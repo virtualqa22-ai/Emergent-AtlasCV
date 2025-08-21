@@ -262,7 +262,7 @@ async def jd_coverage(input: CoverageInput):
         else:
             missing.append(k)
 
-    overall_cov = round(100.0 * (len(matched) / len(unique_jd),) if unique_jd else 0, 1)
+    overall_cov = round(100.0 * (len(matched) / len(unique_jd)) if unique_jd else 0, 1)
 
     # Per-section coverage
     per_section: Dict[str, SectionCoverage] = {}
