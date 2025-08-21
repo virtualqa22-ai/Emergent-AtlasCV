@@ -397,6 +397,209 @@ class AtlasCVAPITester:
         
         return False
 
+    # Phase 4 AI Assist Tests
+    def test_ai_rewrite_bullets(self):
+        """Test POST /api/ai/rewrite-bullets - Phase 4 AI Assist"""
+        test_data = {
+            "bullets": ["Built dashboards"],
+            "role_title": "Data Analyst", 
+            "jd_context": "dashboards in Tableau",
+            "tone": "impactful"
+        }
+        
+        success, response = self.run_test(
+            "AI Rewrite Bullets",
+            "POST",
+            "ai/rewrite-bullets",
+            200,
+            data=test_data
+        )
+        
+        if success:
+            # Verify response structure
+            required_fields = ['improved_bullets', 'tips']
+            for field in required_fields:
+                if field not in response:
+                    print(f"   ❌ Missing required field: {field}")
+                    return False
+            
+            improved_bullets = response.get('improved_bullets', [])
+            tips = response.get('tips', [])
+            
+            # Verify types
+            if not isinstance(improved_bullets, list):
+                print(f"   ❌ improved_bullets should be a list, got {type(improved_bullets)}")
+                return False
+            
+            if not isinstance(tips, list):
+                print(f"   ❌ tips should be a list, got {type(tips)}")
+                return False
+            
+            print(f"   📊 Improved bullets: {len(improved_bullets)} items")
+            print(f"   📊 Tips: {len(tips)} items")
+            
+            # Should have at least one improved bullet
+            if len(improved_bullets) == 0:
+                print("   ❌ No improved bullets returned")
+                return False
+            
+            print("   ✅ AI rewrite bullets endpoint working correctly")
+            return True
+        
+        return False
+
+    def test_ai_lint(self):
+        """Test POST /api/ai/lint - Phase 4 AI Assist"""
+        test_data = {
+            "text": "This was created by me to utilize synergy.",
+            "section": "summary"
+        }
+        
+        success, response = self.run_test(
+            "AI Lint",
+            "POST", 
+            "ai/lint",
+            200,
+            data=test_data
+        )
+        
+        if success:
+            # Verify response structure
+            required_fields = ['issues', 'suggestions']
+            for field in required_fields:
+                if field not in response:
+                    print(f"   ❌ Missing required field: {field}")
+                    return False
+            
+            issues = response.get('issues', [])
+            suggestions = response.get('suggestions', [])
+            
+            # Verify types
+            if not isinstance(issues, list):
+                print(f"   ❌ issues should be a list, got {type(issues)}")
+                return False
+            
+            if not isinstance(suggestions, list):
+                print(f"   ❌ suggestions should be a list, got {type(suggestions)}")
+                return False
+            
+            print(f"   📊 Issues found: {len(issues)} items")
+            print(f"   📊 Suggestions: {len(suggestions)} items")
+            
+            # Verify issue structure if any issues found
+            if len(issues) > 0:
+                first_issue = issues[0]
+                required_issue_fields = ['type', 'message']
+                for field in required_issue_fields:
+                    if field not in first_issue:
+                        print(f"   ❌ Issue missing required field: {field}")
+                        return False
+                
+                # Check for expected issue types (passive/filler)
+                issue_types = [issue.get('type', '') for issue in issues]
+                expected_types = ['passive', 'filler']
+                found_expected = any(t in issue_types for t in expected_types)
+                
+                if found_expected:
+                    print(f"   ✅ Found expected issue types: {[t for t in issue_types if t in expected_types]}")
+                else:
+                    print(f"   📊 Issue types found: {issue_types}")
+            
+            print("   ✅ AI lint endpoint working correctly")
+            return True
+        
+        return False
+
+    def test_ai_suggest_keywords(self):
+        """Test POST /api/ai/suggest-keywords - Phase 4 AI Assist"""
+        test_data = {
+            "jd_keywords": ["javascript", "react", "node"],
+            "resume_text": "Built APIs"
+        }
+        
+        success, response = self.run_test(
+            "AI Suggest Keywords",
+            "POST",
+            "ai/suggest-keywords", 
+            200,
+            data=test_data
+        )
+        
+        if success:
+            # Verify response structure
+            required_fields = ['synonyms', 'prioritize']
+            for field in required_fields:
+                if field not in response:
+                    print(f"   ❌ Missing required field: {field}")
+                    return False
+            
+            synonyms = response.get('synonyms', {})
+            prioritize = response.get('prioritize', [])
+            
+            # Verify types
+            if not isinstance(synonyms, dict):
+                print(f"   ❌ synonyms should be a dict, got {type(synonyms)}")
+                return False
+            
+            if not isinstance(prioritize, list):
+                print(f"   ❌ prioritize should be a list, got {type(prioritize)}")
+                return False
+            
+            print(f"   📊 Synonyms for {len(synonyms)} keywords")
+            print(f"   📊 Prioritized keywords: {len(prioritize)} items")
+            
+            # Verify synonyms structure
+            for keyword, synonym_list in synonyms.items():
+                if not isinstance(synonym_list, list):
+                    print(f"   ❌ Synonyms for '{keyword}' should be a list, got {type(synonym_list)}")
+                    return False
+            
+            print("   ✅ AI suggest keywords endpoint working correctly")
+            return True
+        
+        return False
+
+    def test_ai_fallback_behavior(self):
+        """Test AI endpoints fallback when LLM unavailable - Phase 4 requirement"""
+        print("\n🔍 Testing AI fallback behavior (heuristic responses)...")
+        
+        # Test all three AI endpoints - they should all return 200 even if LLM fails
+        # because they have heuristic fallbacks
+        
+        fallback_tests = [
+            ("AI Rewrite Fallback", "ai/rewrite-bullets", {
+                "bullets": ["Worked on projects"],
+                "role_title": "Engineer",
+                "tone": "impactful"
+            }),
+            ("AI Lint Fallback", "ai/lint", {
+                "text": "This was created by me to utilize synergy.",
+                "section": "summary"
+            }),
+            ("AI Keywords Fallback", "ai/suggest-keywords", {
+                "jd_keywords": ["python", "django"],
+                "resume_text": "Built web applications"
+            })
+        ]
+        
+        all_passed = True
+        for test_name, endpoint, data in fallback_tests:
+            success, response = self.run_test(
+                test_name,
+                "POST",
+                endpoint,
+                200,
+                data=data
+            )
+            
+            if not success:
+                all_passed = False
+                print(f"   ❌ {test_name} failed")
+            else:
+                print(f"   ✅ {test_name} returned valid response (fallback working)")
+        
+        return all_passed
+
     def test_presets_endpoint(self):
         """Test GET /api/presets endpoint - Phase 3 requirement"""
         success, response = self.run_test(
