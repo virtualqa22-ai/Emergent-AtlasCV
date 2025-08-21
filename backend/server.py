@@ -43,8 +43,8 @@ class ResumeEducation(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     institution: str = ""
     degree: str = ""
-    start_date: str = ""  # YYYY-MM
-    end_date: Optional[str] = None  # YYYY-MM or "Present"
+    start_date: str = ""  # YYYY-MM or YYYY/MM per preset
+    end_date: Optional[str] = None  # YYYY-MM/YYYY/MM or "Present"
     details: str = ""
 
 class ResumeExperience(BaseModel):
@@ -52,8 +52,8 @@ class ResumeExperience(BaseModel):
     company: str = ""
     title: str = ""
     city: str = ""
-    start_date: str = ""  # YYYY-MM
-    end_date: Optional[str] = None  # YYYY-MM or "Present"
+    start_date: str = ""
+    end_date: Optional[str] = None
     bullets: List[str] = []
 
 class ResumeProject(BaseModel):
@@ -113,6 +113,83 @@ class CoverageResult(BaseModel):
     frequency: Dict[str, int]
     per_section: Dict[str, SectionCoverage]
 
+class ValidateInput(BaseModel):
+    resume: Resume
+
+class ValidateResult(BaseModel):
+    issues: List[str]
+    locale: str
+
+# -----------------------
+# Presets (field order, labels, date formats)
+# -----------------------
+PRESETS: Dict[str, Dict[str, Any]] = {
+    "US": {
+        "label": "United States",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "labels": {"experience": "Work Experience", "education": "Education"},
+        "rules": [
+            "No photo in resume",
+            "Show city and state in Contact",
+            "Use Month-Year dates (e.g., 2024-05)",
+        ],
+    },
+    "EU": {
+        "label": "European Union (Europass)",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "labels": {"experience": "Experience", "education": "Education (Europass)"},
+        "rules": [
+            "GDPR-friendly contact (avoid DOB unless asked)",
+            "Optional photo toggle",
+        ],
+    },
+    "AU": {
+        "label": "Australia",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "skills", "education", "projects"],
+        "labels": {"experience": "Employment History"},
+        "rules": [
+            "2–3 pages acceptable",
+            "Referees optional",
+            "No photo",
+            "Right-to-work statement optional",
+        ],
+    },
+    "IN": {
+        "label": "India",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "skills", "experience", "projects", "education"],
+        "labels": {"experience": "Experience", "projects": "Projects (important)"},
+        "rules": [
+            "Phone should include country code (e.g., +91)",
+            "Projects/internships prominent",
+        ],
+    },
+    "JP-R": {
+        "label": "Japan — Rirekisho",
+        "date_format": "YYYY/MM",
+        "section_order": ["profile", "summary", "experience", "education", "skills", "projects"],
+        "labels": {"experience": "職歴 (Shokureki)", "education": "学歴 (Gakureki)"},
+        "rules": [
+            "Structured, chronological",
+            "Kana name field recommended",
+            "Optional photo toggle (default OFF)",
+        ],
+    },
+    "JP-S": {
+        "label": "Japan — Shokumu Keirekisho",
+        "date_format": "YYYY/MM",
+        "section_order": ["profile", "summary", "skills", "projects", "experience", "education"],
+        "labels": {"experience": "職務経歴", "skills": "スキルマトリクス"},
+        "rules": [
+            "Narrative achievements",
+            "Skills matrix and project details",
+        ],
+    },
+}
+
 # -----------------------
 # Minimal heuristic ATS score (no AI)
 # -----------------------
@@ -162,7 +239,7 @@ a the and or for with of to in on by at from as is are be an – — & + / \n we
 # stronger stemming rules (simple suffix reductions)
 STEM_RULES = [
     (re.compile(r"ies$"), "y"),
-    (re.compile(r"(xes|ses|zes|ches|shes)$"), "es"),  # leave base before removing 'es'
+    (re.compile(r"(xes|ses|zes|ches|shes)$"), "es"),
     (re.compile(r"ing$"), ""),
     (re.compile(r"ed$"), ""),
     (re.compile(r"es$"), ""),
@@ -185,7 +262,6 @@ ALIAS_MAP = {
 
 def normalize_token(t: str) -> str:
     t = t.lower().strip()
-    # collapse digits like 2024 or 3+ to keep as-is
     for pat, repl in STEM_RULES:
         t = pat.sub(repl, t)
     return t
@@ -211,7 +287,6 @@ async def parse_jd(input: JDParseInput):
     freq: Dict[str, int] = {}
     for p in parts:
         freq[p] = freq.get(p, 0) + 1
-    # Top keywords by frequency (simple heuristic)
     top = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:25]
     keywords = list({k for k, _ in top})
     keywords = expand_aliases(keywords)
@@ -220,7 +295,6 @@ async def parse_jd(input: JDParseInput):
 @api_router.post("/jd/coverage", response_model=CoverageResult)
 async def jd_coverage(input: CoverageInput):
     r = input.resume
-    # Section texts
     sections_text = {
         "summary": r.summary or "",
         "skills": " ".join(r.skills or []),
@@ -229,7 +303,6 @@ async def jd_coverage(input: CoverageInput):
         "projects": " ".join([" ".join([p.name, p.description or "", " ".join(p.tech or [])]) for p in r.projects]),
     }
 
-    # Token bags per section
     section_bags: Dict[str, Dict[str, int]] = {}
     for sec, text in sections_text.items():
         tokens = tokenize(text)
@@ -238,19 +311,16 @@ async def jd_coverage(input: CoverageInput):
             bag[t] = bag.get(t, 0) + 1
         section_bags[sec] = bag
 
-    # Overall bag
     overall_bag: Dict[str, int] = {}
     for bag in section_bags.values():
         for t, c in bag.items():
             overall_bag[t] = overall_bag.get(t, 0) + c
 
-    # Prepare JD keywords
     jd_norm = [normalize_token(k) for k in input.jd_keywords]
     jd_norm = [k for k in jd_norm if k]
     jd_norm = expand_aliases(jd_norm)
     unique_jd = sorted(list(set(jd_norm)))
 
-    # Compute matches/missing overall
     matched: List[str] = []
     missing: List[str] = []
     frequency: Dict[str, int] = {}
@@ -264,7 +334,6 @@ async def jd_coverage(input: CoverageInput):
 
     overall_cov = round(100.0 * (len(matched) / len(unique_jd)) if unique_jd else 0, 1)
 
-    # Per-section coverage
     per_section: Dict[str, SectionCoverage] = {}
     for sec, bag in section_bags.items():
         sec_matched: List[str] = []
@@ -289,7 +358,61 @@ async def jd_coverage(input: CoverageInput):
     )
 
 # -----------------------
-# Routes
+# Presets routes and validation
+# -----------------------
+@api_router.get("/presets")
+async def get_presets():
+    return {"presets": [{"code": k, **v} for k, v in PRESETS.items()]}
+
+@api_router.get("/presets/{code}")
+async def get_preset(code: str):
+    if code not in PRESETS:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    return {"code": code, **PRESETS[code]}
+
+@api_router.post("/validate", response_model=ValidateResult)
+async def validate_resume(input: ValidateInput):
+    r = input.resume
+    code = r.locale if r.locale in PRESETS else "IN"
+    preset = PRESETS[code]
+    issues: List[str] = []
+
+    # date format suggestion check
+    date_fmt = preset.get("date_format", "YYYY-MM")
+    date_sep = "/" if date_fmt == "YYYY/MM" else "-"
+
+    def check_date(d: Optional[str]) -> bool:
+        if not d:
+            return True
+        return (date_sep in d) and (len(d.split(date_sep)) == 2)
+
+    for e in r.experience:
+        if not check_date(e.start_date):
+            issues.append(f"Use {date_fmt} for start_date in experience")
+        if e.end_date and not check_date(e.end_date):
+            issues.append(f"Use {date_fmt} for end_date in experience")
+
+    for ed in r.education:
+        if not check_date(ed.start_date):
+            issues.append(f"Use {date_fmt} for start_date in education")
+        if ed.end_date and not check_date(ed.end_date):
+            issues.append(f"Use {date_fmt} for end_date in education")
+
+    # locale-specific quick rules
+    if code == "US":
+        if not r.contact.state:
+            issues.append("Add state in Contact for US resumes")
+    if code == "IN":
+        if r.contact.phone and not r.contact.phone.strip().startswith("+"):
+            issues.append("Include +country code in phone (e.g., +91…)")
+    if code.startswith("JP"):
+        if date_fmt != "YYYY/MM":
+            issues.append("Japan presets use YYYY/MM date format")
+
+    return ValidateResult(issues=issues, locale=code)
+
+# -----------------------
+# Basic routes
 # -----------------------
 @api_router.get("/")
 async def root():
