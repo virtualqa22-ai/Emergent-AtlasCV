@@ -277,7 +277,7 @@ async def jd_coverage(input: CoverageInput):
                 sec_freq[k] = c
             else:
                 sec_missing.append(k)
-        cov = round(100.0 * (len(sec_matched) / len(unique_jd),) if unique_jd else 0, 1)
+        cov = round(100.0 * (len(sec_matched) / len(unique_jd)) if unique_jd else 0, 1)
         per_section[sec] = SectionCoverage(coverage_percent=cov, matched=sorted(list(set(sec_matched))), missing=sorted(list(set(sec_missing))), frequency=sec_freq)
 
     return CoverageResult(
