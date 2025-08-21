@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
+import re
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -88,6 +89,23 @@ class ResumeCreate(BaseModel):
 class ResumeUpdate(ResumeCreate):
     id: str
 
+class JDParseInput(BaseModel):
+    text: str
+
+class JDParseResult(BaseModel):
+    keywords: List[str]
+    top_keywords: List[str]
+
+class CoverageInput(BaseModel):
+    resume: Resume
+    jd_keywords: List[str]
+
+class CoverageResult(BaseModel):
+    coverage_percent: float
+    matched: List[str]
+    missing: List[str]
+    frequency: Dict[str, int]
+
 # -----------------------
 # Minimal heuristic ATS score (no AI)
 # -----------------------
@@ -126,6 +144,102 @@ def compute_heuristic_score(resume: Resume) -> Dict[str, Any]:
         score -= 10
     score = max(0, min(100, score))
     return {"score": score, "hints": hints}
+
+# -----------------------
+# JD parsing and coverage (heuristic)
+# -----------------------
+STOPWORDS = set("""
+a the and or for with of to in on by at from as is are be an – — & + / \n
+""".split())
+
+STEM_PATTERNS = [
+    (re.compile(r"ing$"), ""),
+    (re.compile(r"ed$"), ""),
+    (re.compile(r"s$"), ""),
+]
+
+COMMON_SPLIT = re.compile(r"[^a-z0-9+#]+")
+
+ALIAS_MAP = {
+    "javascript": ["js"],
+    "typescript": ["ts"],
+    "react": ["reactjs", "react.js"],
+    "node": ["nodejs", "node.js"],
+    "aws": ["amazon web services"],
+    "ml": ["machine learning"],
+}
+
+def normalize_token(t: str) -> str:
+    t = t.lower().strip()
+    for pat, repl in STEM_PATTERNS:
+        t = pat.sub(repl, t)
+    return t
+
+def expand_aliases(tokens: List[str]) -> List[str]:
+    expanded = set(tokens)
+    for base, al in ALIAS_MAP.items():
+        if base in tokens:
+            expanded.update(al)
+        for a in al:
+            if a in tokens:
+                expanded.add(base)
+    return list(expanded)
+
+@api_router.post("/jd/parse", response_model=JDParseResult)
+async def parse_jd(input: JDParseInput):
+    raw = input.text.lower()
+    parts = [normalize_token(p) for p in COMMON_SPLIT.split(raw) if p]
+    parts = [p for p in parts if p and p not in STOPWORDS and len(p) > 1]
+    freq: Dict[str, int] = {}
+    for p in parts:
+        freq[p] = freq.get(p, 0) + 1
+    # Top keywords by frequency (simple heuristic)
+    top = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:25]
+    keywords = list({k for k, _ in top})
+    keywords = expand_aliases(keywords)
+    return JDParseResult(keywords=keywords, top_keywords=list({k for k, _ in top}))
+
+@api_router.post("/jd/coverage", response_model=CoverageResult)
+async def jd_coverage(input: CoverageInput):
+    # Build resume text bag
+    r = input.resume
+    text_chunks: List[str] = []
+    text_chunks.extend([r.summary or "", " ".join(r.skills or [])])
+    for e in r.experience:
+        text_chunks.extend([e.company, e.title, e.city, e.start_date or "", e.end_date or ""])
+        text_chunks.extend(e.bullets or [])
+    for ed in r.education:
+        text_chunks.extend([ed.institution, ed.degree, ed.details])
+    for p in r.projects:
+        text_chunks.extend([p.name, p.description, " ".join(p.tech or [])])
+    resume_text = " ".join([c for c in text_chunks if c])
+    tokens = [normalize_token(p) for p in COMMON_SPLIT.split(resume_text.lower()) if p]
+    tokens = [p for p in tokens if p and p not in STOPWORDS]
+
+    bag: Dict[str, int] = {}
+    for t in tokens:
+        bag[t] = bag.get(t, 0) + 1
+
+    jd_norm = [normalize_token(k) for k in input.jd_keywords]
+    jd_norm = expand_aliases([k for k in jd_norm if k])
+
+    matched: List[str] = []
+    missing: List[str] = []
+    frequency: Dict[str, int] = {}
+
+    for k in jd_norm:
+        count = bag.get(k, 0)
+        if count > 0:
+            matched.append(k)
+            frequency[k] = count
+        else:
+            missing.append(k)
+
+    coverage = 0.0
+    if len(jd_norm) > 0:
+        coverage = round(100.0 * (len(matched) / len(jd_norm)), 1)
+
+    return CoverageResult(coverage_percent=coverage, matched=sorted(list(set(matched))), missing=sorted(list(set(missing))), frequency=frequency)
 
 # -----------------------
 # Routes

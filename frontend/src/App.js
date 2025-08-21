@@ -9,7 +9,7 @@ import { Label } from "./components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
-import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText } from "lucide-react";
+import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,21 +31,16 @@ function useResumeDraft() {
   return { resumeId, remember, clear };
 }
 
-function SectionHeader({ title, hint }) {
-  return (
-    <div className="flex items-baseline justify-between">
-      <h3 className="text-base font-semibold">{title}</h3>
-      {hint ? <span className="text-xs label-sub">{hint}</span> : null}
-    </div>
-  );
-}
-
 function Home() {
-  const { resumeId, remember, clear } = useResumeDraft();
+  const { resumeId, remember } = useResumeDraft();
   const [locales, setLocales] = useState([]);
   const [form, setForm] = useState(defaultResumeIN);
   const [saving, setSaving] = useState(false);
   const [ats, setAts] = useState({ score: 0, hints: [] });
+  const [jdText, setJdText] = useState("");
+  const [jdKeywords, setJdKeywords] = useState([]);
+  const [coverage, setCoverage] = useState(null);
+  const [parsing, setParsing] = useState(false);
 
   const handleChange = (path, value) => {
     setForm((prev) => {
@@ -93,6 +88,27 @@ function Home() {
       setSaving(false);
     }
   };
+
+  const parseJD = async () => {
+    if (!jdText.trim()) return;
+    setParsing(true);
+    setCoverage(null);
+    try {
+      const { data } = await axios.post(`${API}/jd/parse`, { text: jdText });
+      setJdKeywords(data.keywords || []);
+    } catch (e) { console.error(e); }
+    finally { setParsing(false); }
+  };
+
+  const checkCoverage = async () => {
+    if (!jdKeywords.length) return;
+    try {
+      const { data } = await axios.post(`${API}/jd/coverage`, { resume: form, jd_keywords: jdKeywords });
+      setCoverage(data);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { if (jdKeywords.length) { checkCoverage(); } }, [jdKeywords, form]);
 
   const scoreColor = useMemo(() => ats.score >= 80 ? "text-emerald-600" : ats.score >= 60 ? "text-amber-600" : "text-rose-600", [ats.score]);
 
@@ -161,6 +177,44 @@ function Home() {
                   <Input className="mt-1" value={form.contact.linkedin} onChange={(e) => handleChange("contact.linkedin", e.target.value)} placeholder="https://linkedin.com/in/.." />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* JD Parser & Coverage */}
+          <Card className="section card-hover">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5" /> JD Match (Heuristic)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Label>Paste Job Description</Label>
+              <Textarea rows={5} placeholder="Paste JD here to extract keywords and see coverage." value={jdText} onChange={(e) => setJdText(e.target.value)} />
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={parseJD} disabled={parsing}>{parsing ? "Parsing..." : "Extract keywords"}</Button>
+                <Button variant="ghost" onClick={() => { setJdText(""); setJdKeywords([]); setCoverage(null); }}>Clear</Button>
+              </div>
+              {jdKeywords.length > 0 && (
+                <div className="text-sm">
+                  <div className="mb-1">Keywords ({jdKeywords.length}):</div>
+                  <div className="flex flex-wrap gap-2">
+                    {jdKeywords.map((k, i) => (
+                      <span key={i} className="rounded-full border px-2 py-1 text-xs">{k}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {coverage && (
+                <div className="text-sm mt-2">
+                  <div>Coverage: <span className="font-semibold">{coverage.coverage_percent}%</span></div>
+                  {coverage.missing.length > 0 && (
+                    <div className="mt-2">
+                      <div className="mb-1">Missing keywords:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {coverage.missing.map((k, i) => (<span key={i} className="rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 text-xs">{k}</span>))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
