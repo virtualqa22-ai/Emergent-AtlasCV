@@ -810,12 +810,46 @@ class AtlasCVAPITester:
             return False
 
 def main():
-    print("🚀 Starting AtlasCV Backend API Tests - Phase 3 Validation")
+    print("🚀 Starting AtlasCV Backend API Tests - Phase 4 AI Assist")
     print("=" * 60)
     
     tester = AtlasCVAPITester()
     
-    # Run Phase 3 specific tests first
+    # Run Phase 4 AI Assist tests first (current focus)
+    print("\n📋 PHASE 4 TESTS - AI Assist Endpoints")
+    print("=" * 40)
+    
+    phase4_tests = [
+        tester.test_ai_rewrite_bullets,
+        tester.test_ai_lint,
+        tester.test_ai_suggest_keywords,
+        tester.test_ai_fallback_behavior
+    ]
+    
+    phase4_passed = 0
+    for test in phase4_tests:
+        if test():
+            phase4_passed += 1
+    
+    print(f"\n📊 Phase 4 Results: {phase4_passed}/{len(phase4_tests)} tests passed")
+    
+    # Test existing endpoints to ensure they still work
+    print("\n📋 EXISTING ENDPOINTS VERIFICATION")
+    print("=" * 40)
+    
+    existing_tests = [
+        tester.test_jd_parse,
+        tester.test_jd_coverage
+    ]
+    
+    existing_passed = 0
+    for test in existing_tests:
+        if test():
+            existing_passed += 1
+    
+    print(f"\n📊 Existing Endpoints: {existing_passed}/{len(existing_tests)} tests passed")
+    
+    # Run Phase 3 tests for completeness
     print("\n📋 PHASE 3 TESTS - Presets + Validation")
     print("=" * 40)
     
@@ -834,7 +868,7 @@ def main():
     
     print(f"\n📊 Phase 3 Results: {phase3_passed}/{len(phase3_tests)} tests passed")
     
-    # Run additional existing tests
+    # Run additional backend tests
     print("\n📋 ADDITIONAL BACKEND TESTS")
     print("=" * 40)
     
@@ -845,9 +879,7 @@ def main():
         tester.test_score_resume,
         tester.test_update_resume,
         tester.test_get_resume,
-        tester.test_score_after_update,
-        tester.test_jd_parse,
-        tester.test_jd_coverage
+        tester.test_score_after_update
     ]
     
     for test in additional_tests:
@@ -856,18 +888,19 @@ def main():
     # Print final results
     print("\n" + "=" * 60)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
-    print(f"📊 Phase 3 Critical Tests: {phase3_passed}/{len(phase3_tests)} passed")
+    print(f"📊 Phase 4 AI Assist Tests: {phase4_passed}/{len(phase4_tests)} passed")
+    print(f"📊 Existing Endpoints: {existing_passed}/{len(existing_tests)} passed")
+    print(f"📊 Phase 3 Tests: {phase3_passed}/{len(phase3_tests)} passed")
     
-    if phase3_passed == len(phase3_tests):
-        print("🎉 All Phase 3 tests passed!")
-        if tester.tests_passed == tester.tests_run:
-            print("🎉 All backend tests passed!")
-            return 0
-        else:
-            print("⚠️  Some additional tests failed, but Phase 3 is complete")
-            return 0
+    if phase4_passed == len(phase4_tests) and existing_passed == len(existing_tests):
+        print("🎉 All Phase 4 AI Assist tests passed!")
+        print("🎉 All existing endpoints still working!")
+        return 0
     else:
-        print("❌ Phase 3 tests failed!")
+        if phase4_passed < len(phase4_tests):
+            print("❌ Some Phase 4 AI Assist tests failed!")
+        if existing_passed < len(existing_tests):
+            print("❌ Some existing endpoints are broken!")
         return 1
 
 if __name__ == "__main__":
