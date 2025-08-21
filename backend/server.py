@@ -10,6 +10,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 import re
+import json
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -111,7 +112,7 @@ class CoverageResult(BaseModel):
     matched: List[str]
     missing: List[str]
     frequency: Dict[str, int]
-    per_section: Dict[str, SectionCoverage]
+    per_section: Dict[str, 'SectionCoverage']
 
 class ValidateInput(BaseModel):
     resume: Resume
@@ -356,6 +357,204 @@ async def jd_coverage(input: CoverageInput):
         frequency=frequency,
         per_section=per_section,
     )
+
+# -----------------------
+# AI Assist (Phase 4)
+# -----------------------
+class AIRewriteRequest(BaseModel):
+    role_title: Optional[str] = None
+    bullets: List[str]
+    jd_context: Optional[str] = None
+    tone: Optional[str] = Field(default="impactful")  # concise | impactful
+
+class AIRewriteResponse(BaseModel):
+    improved_bullets: List[str]
+    tips: List[str] = []
+
+class AILintIssue(BaseModel):
+    type: str
+    message: str
+    suggestion: Optional[str] = None
+    example: Optional[str] = None
+    severity: Optional[str] = None  # low | medium | high
+
+class AILintRequest(BaseModel):
+    text: str
+    section: str = Field(pattern="^(summary|bullet)$")
+
+class AILintResponse(BaseModel):
+    issues: List[AILintIssue]
+    suggestions: List[str] = []
+
+class AISuggestKeywordsRequest(BaseModel):
+    jd_keywords: List[str]
+    resume_text: Optional[str] = None
+
+class AISuggestKeywordsResponse(BaseModel):
+    synonyms: Dict[str, List[str]]
+    prioritize: List[str]
+
+# Internal LLM helper
+_LLMCACHED = {"client": None, "available": False}
+
+def _init_llm_client():
+    if _LLMCACHED["client"] is not None:
+        return _LLMCACHED["client"], _LLMCACHED["available"]
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        _LLMCACHED.update({"client": None, "available": False})
+        return None, False
+    try:
+        # Import emergentintegrations lazily
+        from emergentintegrations import EmergentClient
+        client = EmergentClient(api_key=api_key)
+        _LLMCACHED.update({"client": client, "available": True})
+        return client, True
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"LLM client init failed, falling back to heuristics: {e}")
+        _LLMCACHED.update({"client": None, "available": False})
+        return None, False
+
+async def _llm_chat_json(system_prompt: str, user_prompt: str, temperature: float = 0.2, max_tokens: int = 800) -> Optional[Dict[str, Any]]:
+    client, ok = _init_llm_client()
+    if not ok:
+        return None
+    try:
+        # The following call shape follows integration playbook semantics
+        # If the SDK differs, this will raise and we fallback gracefully
+        payload = {
+            "model": "gpt-4.1-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        # Expecting client.chat.completions.create(...) to return a structure with choices[0].message.content
+        resp = await client.chat.completions.create(payload)
+        content = resp["choices"][0]["message"]["content"] if isinstance(resp, dict) else getattr(resp.choices[0].message, "content", "")
+        # Try parse JSON
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            # Attempt code fence extraction
+            m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
+            if m:
+                try:
+                    return json.loads(m.group(1))
+                except Exception:
+                    pass
+            m = re.search(r"\{.*\}", content, re.DOTALL)
+            if m:
+                try:
+                    return json.loads(m.group(0))
+                except Exception:
+                    pass
+        return None
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"LLM call failed, fallback: {e}")
+        return None
+
+# Heuristic fallbacks
+FILLER_WORDS = ["utilize", "synergy", "leverage", "in order to", "core competency", "results-driven"]
+PASSIVE_HINT = re.compile(r"\b(was|were|is|are|been|being)\b\s+\w+ed\b", re.IGNORECASE)
+
+def _rewrite_bullets_heuristic(bullets: List[str]) -> Dict[str, Any]:
+    improved = []
+    tips = [
+        "Start with strong action verbs (e.g., Led, Built, Optimized)",
+        "Quantify impact with numbers (%/time/$)",
+        "Specify tools/tech and scope",
+    ]
+    for b in bullets:
+        nb = b.strip()
+        # Ensure action verb
+        if nb and not re.match(r"^(led|built|created|optimized|managed|designed|developed)\b", nb, re.IGNORECASE):
+            nb = f"Improved: {nb}"
+        # Add quantification hint if none
+        if not re.search(r"\d", nb):
+            nb += " (add metrics: e.g., 25% faster, $100k saved)"
+        improved.append(nb)
+    return {"improved_bullets": improved, "tips": tips}
+
+def _lint_text_heuristic(text: str) -> Dict[str, Any]:
+    issues: List[Dict[str, Any]] = []
+    if PASSIVE_HINT.search(text):
+        issues.append({"type": "passive", "message": "Passive voice detected", "suggestion": "Use active voice", "severity": "medium"})
+    for fw in FILLER_WORDS:
+        if fw in text.lower():
+            issues.append({"type": "filler", "message": f"Avoid filler word: '{fw}'", "suggestion": "Replace with precise wording", "severity": "low"})
+    if len(text) > 300:
+        issues.append({"type": "length", "message": "Text might be too long", "suggestion": "Trim to essentials", "severity": "low"})
+    suggestions = ["Prefer concise, metric-driven sentences", "Begin bullets with action verbs"]
+    return {"issues": issues, "suggestions": suggestions}
+
+def _synonyms_heuristic(jd_keywords: List[str]) -> Dict[str, Any]:
+    syn: Dict[str, List[str]] = {}
+    for k in jd_keywords:
+        base = normalize_token(k)
+        al = ALIAS_MAP.get(base, [])
+        syn[k] = list(sorted(set([*al])))
+    prioritize = sorted(list({normalize_token(k) for k in jd_keywords}))[:10]
+    return {"synonyms": syn, "prioritize": prioritize}
+
+@api_router.post("/ai/rewrite-bullets", response_model=AIRewriteResponse)
+async def ai_rewrite_bullets(req: AIRewriteRequest):
+    sys = "You are an expert resume writer. Return ONLY valid JSON."
+    user = (
+        "Rewrite the bullets to be action-oriented and quantified. Keep ATS-safe.\n"
+        f"Role: {req.role_title or 'N/A'}\n"
+        f"JD Context: {req.jd_context or 'N/A'}\n"
+        f"Tone: {req.tone}\n"
+        "Return JSON: {\n  \"improved_bullets\": [\"...\"],\n  \"tips\": [\"...\"]\n} \n"
+        f"Bullets: {json.dumps(req.bullets)}"
+    )
+    parsed = await _llm_chat_json(sys, user, temperature=0.2, max_tokens=700)
+    if parsed and isinstance(parsed, dict) and "improved_bullets" in parsed:
+        return AIRewriteResponse(improved_bullets=parsed.get("improved_bullets", []), tips=parsed.get("tips", []))
+    # fallback
+    h = _rewrite_bullets_heuristic(req.bullets)
+    return AIRewriteResponse(**h)
+
+@api_router.post("/ai/lint", response_model=AILintResponse)
+async def ai_lint(req: AILintRequest):
+    sys = "You are a resume linting assistant. Return ONLY valid JSON."
+    user = (
+        "Find issues in the text focused on passive voice, filler words, vagueness, and excess length.\n"
+        "Return JSON: {\n  \"issues\": [{\"type\": \"passive|filler|vagueness|length\", \"message\": \"...\", \"suggestion\": \"...\", \"severity\": \"low|medium|high\"}],\n  \"suggestions\": [\"...\"]\n}\n"
+        f"Section: {req.section}\nText: {req.text}"
+    )
+    parsed = await _llm_chat_json(sys, user, temperature=0.0, max_tokens=600)
+    if parsed and isinstance(parsed, dict) and "issues" in parsed:
+        issues = [AILintIssue(**i) for i in parsed.get("issues", []) if isinstance(i, dict)]
+        return AILintResponse(issues=issues, suggestions=parsed.get("suggestions", []))
+    h = _lint_text_heuristic(req.text)
+    issues = [AILintIssue(**i) for i in h.get("issues", [])]
+    return AILintResponse(issues=issues, suggestions=h.get("suggestions", []))
+
+@api_router.post("/ai/suggest-keywords", response_model=AISuggestKeywordsResponse)
+async def ai_suggest_keywords(req: AISuggestKeywordsRequest):
+    sys = "You suggest synonyms and prioritize keywords for ATS and recruiter search. Return ONLY valid JSON."
+    user = (
+        "Given JD keywords and optional resume text, propose synonyms/stems and a prioritized list (top 10).\n"
+        "Return JSON: {\n  \"synonyms\": {\"keyword\": [\"syn1\", \"syn2\"]},\n  \"prioritize\": [\"kw1\", \"kw2\"]\n}\n"
+        f"JD Keywords: {json.dumps(req.jd_keywords)}\nResume: {req.resume_text or 'N/A'}"
+    )
+    parsed = await _llm_chat_json(sys, user, temperature=0.1, max_tokens=500)
+    if parsed and isinstance(parsed, dict) and "synonyms" in parsed:
+        # Normalize to correct shapes
+        syn = parsed.get("synonyms", {})
+        prioritize = parsed.get("prioritize", [])
+        # Ensure types
+        syn_fixed: Dict[str, List[str]] = {}
+        for k, v in (syn.items() if isinstance(syn, dict) else []):
+            if isinstance(v, list):
+                syn_fixed[str(k)] = [str(x) for x in v]
+        prioritize_fixed = [str(x) for x in prioritize if isinstance(x, (str, int))]
+        return AISuggestKeywordsResponse(synonyms=syn_fixed, prioritize=prioritize_fixed[:10])
+    h = _synonyms_heuristic(req.jd_keywords)
+    return AISuggestKeywordsResponse(**h)
 
 # -----------------------
 # Presets routes and validation

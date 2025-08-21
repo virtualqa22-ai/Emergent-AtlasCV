@@ -101,3 +101,34 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Implement Phase 4 AI Assist per roadmap: rewrite bullets, linting, keyword suggestions using Emergent LLM key."
+backend:
+  - task: "Add AI Assist endpoints (/api/ai/rewrite-bullets, /api/ai/lint, /api/ai/suggest-keywords)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Implemented endpoints with emergentintegrations client and heuristic fallbacks. Added EMERGENT_LLM_KEY to backend/.env and emergentintegrations to requirements.txt."
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Backend AI endpoints happy-path JSON shapes"
+    - "Heuristic fallback when LLM unavailable"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Please test the three new AI endpoints for basic functionality and schema. Use small sample inputs. No frontend testing yet."
