@@ -46,6 +46,80 @@ function Home() {
   const [coverage, setCoverage] = useState(null);
   const [parsing, setParsing] = useState(false);
   const [validation, setValidation] = useState({ issues: [], locale: "IN" });
+  const [lintSummary, setLintSummary] = useState({ loading: false, issues: [], suggestions: [] });
+  const [bulletLint, setBulletLint] = useState({}); // key: "idx-bi" -> { loading, issues, suggestions }
+  const [rewriting, setRewriting] = useState(""); // key = "idx-bi"
+  const [synLoading, setSynLoading] = useState(false);
+  const [synonymsData, setSynonymsData] = useState({ synonyms: {}, prioritize: [] });
+
+  const keyFor = (i, bi) => `${i}-${bi}`;
+
+  const resumePlainText = () => {
+    try {
+      const expText = (form.experience || []).map(e => [e.company, e.title, e.city, (e.bullets||[]).join(" ")].join(" ")).join(" ");
+      const projText = (form.projects || []).map(p => [p.name, p.description, (p.tech||[]).join(" ")].join(" ")).join(" ");
+      return [form.summary || "", (form.skills||[]).join(" "), expText, projText].join(" ");
+    } catch { return form.summary || ""; }
+  };
+
+  const rewriteBullet = async (i, bi) => {
+    const k = keyFor(i, bi);
+    setRewriting(k);
+    try {
+      const exp = form.experience[i];
+      const bullet = (exp?.bullets || [])[bi] || "";
+      const jd_context = jdText || (jdKeywords || []).join(", ");
+      const payload = { role_title: exp?.title || "", bullets: [bullet], jd_context, tone: "impactful" };
+      const { data } = await axios.post(`${API}/ai/rewrite-bullets`, payload);
+      const improved = (data?.improved_bullets || [])[0];
+      if (improved) {
+        const copy = [...form.experience];
+        copy[i].bullets[bi] = improved;
+        setForm({ ...form, experience: copy });
+      }
+    } catch (e) { console.error(e); }
+    finally { setRewriting(""); }
+  };
+
+  const lintSummaryAI = async () => {
+    if (!form.summary?.trim()) return;
+    setLintSummary((p) => ({ ...p, loading: true, issues: [], suggestions: [] }));
+    try {
+      const { data } = await axios.post(`${API}/ai/lint`, { text: form.summary, section: "summary" });
+      setLintSummary({ loading: false, issues: data?.issues || [], suggestions: data?.suggestions || [] });
+    } catch (e) { console.error(e); setLintSummary({ loading: false, issues: [], suggestions: [] }); }
+  };
+
+  const lintBulletAI = async (i, bi) => {
+    const k = keyFor(i, bi);
+    setBulletLint((prev) => ({ ...prev, [k]: { ...(prev[k]||{}), loading: true } }));
+    try {
+      const exp = form.experience[i];
+      const bullet = (exp?.bullets || [])[bi] || "";
+      const { data } = await axios.post(`${API}/ai/lint`, { text: bullet, section: "bullet" });
+      setBulletLint((prev) => ({ ...prev, [k]: { loading: false, issues: data?.issues || [], suggestions: data?.suggestions || [] } }));
+    } catch (e) {
+      console.error(e);
+      setBulletLint((prev) => ({ ...prev, [k]: { loading: false, issues: [], suggestions: [] } }));
+    }
+  };
+
+  const suggestSynonyms = async () => {
+    if (!jdKeywords.length) return;
+    setSynLoading(true);
+    try {
+      const { data } = await axios.post(`${API}/ai/suggest-keywords`, { jd_keywords: jdKeywords, resume_text: resumePlainText() });
+      setSynonymsData({ synonyms: data?.synonyms || {}, prioritize: data?.prioritize || [] });
+    } catch (e) { console.error(e); }
+    finally { setSynLoading(false); }
+  };
+
+  const addSkill = (s) => {
+    if (!s) return;
+    if ((form.skills||[]).includes(s)) return;
+    handleChange("skills", [...(form.skills||[]), s]);
+  };
+
 
   const handleChange = (path, value) => {
     setForm((prev) => {
