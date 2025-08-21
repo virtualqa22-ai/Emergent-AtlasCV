@@ -1,34 +1,42 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
+
+:root {
+  --atlas-bg: 240 10% 99%;
+  --atlas-card: 0 0% 100%;
+  --atlas-ring: 214 32% 40%;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+html, body, #root, .App {
+  height: 100%;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+body { font-family: 'Figtree', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+.atlas-gradient {
+  background: linear-gradient(120deg, hsl(210 60% 98%), hsl(180 45% 96%));
 }
 
-.App-link {
-    color: #61dafb;
+.header-blur {
+  backdrop-filter: saturate(120%) blur(12px);
+  -webkit-backdrop-filter: saturate(120%) blur(12px);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.section {
+  transition: background-color 200ms ease, box-shadow 200ms ease, color 150ms ease;
 }
+
+.card-hover:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+
+.label-sub { color: hsl(0 0% 45%); }
+
+/* Avoid universal transitions */
+.btn-cta { transition: background-color 180ms ease, color 180ms ease; }
+
+/* Layout helpers */
+.container-xl { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* Editor area */
+.editor-pane { height: 520px; }
+
+/* Sidebar scroll */
+.sidebar-scroll { max-height: 480px; overflow: auto; }
