@@ -292,12 +292,42 @@ function Home() {
           </div>
           {jdKeywords.length > 0 && (
             <div className="text-sm">
-              <div className="mb-1">Keywords ({jdKeywords.length}):</div>
+              <div className="mb-1 flex items-center gap-2">
+                <span>Keywords ({jdKeywords.length}):</span>
+                <Button size="sm" variant="outline" onClick={suggestSynonyms} disabled={synLoading}>{synLoading ? "Loading..." : "Suggest synonyms"}</Button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {jdKeywords.map((k, i) => (
                   <span key={i} className="rounded-full border px-2 py-1 text-xs">{k}</span>
                 ))}
               </div>
+              {Object.keys(synonymsData.synonyms || {}).length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs label-sub mb-1">Synonyms (click to add to skills)</div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(synonymsData.synonyms).map(([kw, syns]) => (
+                      <div key={kw} className="border rounded-md px-2 py-1">
+                        <div className="text-[11px] font-medium">{kw}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {syns.map((s, si) => (
+                            <button key={si} className="rounded-full bg-slate-50 hover:bg-slate-100 border px-2 py-0.5 text-[11px]" onClick={() => addSkill(s)}>{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {synonymsData.prioritize?.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs label-sub mb-1">Prioritize</div>
+                  <div className="flex flex-wrap gap-2">
+                    {synonymsData.prioritize.map((s, i) => (
+                      <span key={i} className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 text-[11px]">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {coverage && (
