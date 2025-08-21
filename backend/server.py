@@ -116,7 +116,7 @@ def compute_heuristic_score(resume: Resume) -> Dict[str, Any]:
             hints.append("Include country code in phone (e.g., +91...).")
             score -= 5
     # Skills density
-    if len(resume.skills) &lt; 5:
+    if len(resume.skills) < 5:
         hints.append("Add more relevant skills (aim for 8–12).")
         score -= 10
     # Bullet quality naive check
