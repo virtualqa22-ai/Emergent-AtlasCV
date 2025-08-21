@@ -74,17 +74,18 @@ function Home() {
   const saveResume = async () => {
     setSaving(true);
     try {
+      let idToScore = resumeId;
       if (!resumeId) {
         const { data } = await axios.post(`${API}/resumes`, form);
-        remember(data.id);
+        idToScore = data.id;
+        remember(idToScore);
       } else {
         await axios.put(`${API}/resumes/${resumeId}`, form);
+        idToScore = resumeId;
       }
-      // Refresh score panel
-      const id = resumeId || JSON.parse(localStorage.getItem("atlascv_resume_id"));
-      if (id) {
-        const { data } = await axios.post(`${API}/resumes/${id}/score`);
-        setAts(data);
+      if (idToScore) {
+        const { data: score } = await axios.post(`${API}/resumes/${idToScore}/score`);
+        setAts(score);
       }
     } catch (e) {
       console.error(e);
