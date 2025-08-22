@@ -52,7 +52,7 @@ function useResumeDraft() {
 }
 
 function Home() {
-  const { resumeId, remember } = useResumeDraft();
+  const { resumeId, remember, isLocalMode, saveLocalResume, getLocalResume } = useResumeDraft();
   const [locales, setLocales] = useState([]);
   const [presets, setPresets] = useState({});
   const [form, setForm] = useState(defaultResumeIN);
@@ -63,6 +63,8 @@ function Home() {
   const [coverage, setCoverage] = useState(null);
   const [parsing, setParsing] = useState(false);
   const [validation, setValidation] = useState({ issues: [], locale: "IN" });
+  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
+  const [cookieConsent, setCookieConsent] = useState(null);
 
   const handleChange = (path, value) => {
     setForm((prev) => {
