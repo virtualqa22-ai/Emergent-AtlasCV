@@ -368,6 +368,52 @@ function Home() {
               <Input className="mt-1" value={form.contact.linkedin} onChange={(e) => handleChange("contact.linkedin", e.target.value)} placeholder="https://linkedin.com/in/.." />
             </div>
           </div>
+          
+          {/* Phase 9: Optional Contact Fields */}
+          {(visibleOptionalFields.photo || visibleOptionalFields.date_of_birth) && (
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Optional Fields for {optionalFieldsConfig.locale || form.locale}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {visibleOptionalFields.photo && (
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Photo URL
+                      {optionalFieldsConfig.optional_fields?.photo === false && (
+                        <span className="text-xs text-red-600">(Not recommended for this locale)</span>
+                      )}
+                    </Label>
+                    <Input 
+                      className="mt-1" 
+                      value={form.contact.photo_url || ""} 
+                      onChange={(e) => handleChange("contact.photo_url", e.target.value)} 
+                      placeholder="https://example.com/photo.jpg" 
+                    />
+                  </div>
+                )}
+                {visibleOptionalFields.date_of_birth && (
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Date of Birth
+                      {optionalFieldsConfig.optional_fields?.date_of_birth === false && (
+                        <span className="text-xs text-red-600">(Not recommended for this locale)</span>
+                      )}
+                    </Label>
+                    <Input 
+                      className="mt-1" 
+                      type="date"
+                      value={form.contact.date_of_birth || ""} 
+                      onChange={(e) => handleChange("contact.date_of_birth", e.target.value)} 
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     ),
