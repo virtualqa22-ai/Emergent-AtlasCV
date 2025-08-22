@@ -83,6 +83,14 @@ function Home() {
   useEffect(() => {
     const boot = async () => {
       try {
+        // Load local data first if in local-only mode
+        if (isLocalMode) {
+          const localData = getLocalResume();
+          if (localData) {
+            setForm(localData);
+          }
+        }
+        
         const [loc, pre] = await Promise.all([
           axios.get(`${API}/locales`),
           axios.get(`${API}/presets`),
@@ -91,8 +99,16 @@ function Home() {
         const map = {};
         (pre.data.presets || []).forEach((p) => { map[p.code] = p; });
         setPresets(map);
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error(e);
+        // If API fails and we're in local mode, still show UI
+        if (isLocalMode) {
+          console.log("Working in local-only mode due to API failure");
+        }
+      }
     };
+    boot();
+  }, [isLocalMode, getLocalResume]);
     boot();
   }, []);
 
