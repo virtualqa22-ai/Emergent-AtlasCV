@@ -112,6 +112,10 @@ class Resume(BaseModel):
     experience: List[ResumeExperience] = []
     education: List[ResumeEducation] = []
     projects: List[ResumeProject] = []
+    # Phase 9: Optional sections
+    certifications: List[ResumeCertification] = []
+    references: List[ResumeReference] = []
+    personal_details: Optional[ResumePersonalDetail] = None
     extras: Dict[str, Any] = {}
 
 class ResumeCreate(BaseModel):
