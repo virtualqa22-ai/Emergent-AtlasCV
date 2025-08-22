@@ -528,8 +528,61 @@ function Home() {
         </div>
       </main>
 
+      {/* Privacy Settings Overlay */}
+      {showPrivacySettings && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">Privacy Settings</h2>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowPrivacySettings(false)}
+                  className="text-gray-500"
+                >
+                  ×
+                </Button>
+              </div>
+              <PrivacySettings 
+                resumeId={resumeId} 
+                userEmail={form.contact?.email}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cookie Consent Banner */}
+      <CookieConsentBanner 
+        onConsentChange={(consentData) => {
+          setCookieConsent(consentData);
+          // Handle analytics/marketing consent here
+          if (consentData.preferences?.analytics) {
+            console.log("Analytics enabled");
+          }
+        }}
+      />
+
       <footer className="border-t bg-white/70">
-        <div className="container-xl py-6 text-sm text-slate-600">© {new Date().getFullYear()} AtlasCV. ATS-safe builder.</div>
+        <div className="container-xl py-6 text-sm text-slate-600">
+          © {new Date().getFullYear()} AtlasCV. ATS-safe builder.
+          <span className="ml-4">
+            <a href="#privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
+            {" • "}
+            <a href="#terms" className="text-blue-600 hover:underline">Terms</a>
+            {cookieConsent && (
+              <span>
+                {" • "}
+                <button 
+                  onClick={() => setShowPrivacySettings(true)}
+                  className="text-blue-600 hover:underline bg-transparent border-0 p-0 text-sm"
+                >
+                  Privacy Settings
+                </button>
+              </span>
+            )}
+          </span>
+        </div>
       </footer>
     </div>
   );
