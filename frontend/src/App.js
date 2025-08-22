@@ -923,47 +923,56 @@ function Home() {
 
   return (
     <div className="min-h-screen atlas-gradient">
-      <header className="sticky top-0 z-30 border-b header-blur bg-white/70">
+      <header className="sticky top-0 z-30 border-b header-blur bg-white/70" role="banner">
         <div className="container-xl flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="AtlasCV" className="brand-logo" />
             <span className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</span>
             <span className="text-sm" style={{color:"#16A34A"}}>ATS-Optimized Resume Builder</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button className="btn-cta" onClick={validateLocale} variant="outline">
-              <ShieldCheck className="h-4 w-4" /> Validate preset
-            </Button>
-            <Button className="btn-cta" onClick={saveResume} disabled={saving}>
-              <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
-            </Button>
-          </div>
+          <nav role="navigation" aria-label="Main navigation">
+            <div className="flex items-center gap-2">
+              <Button className="btn-cta" onClick={validateLocale} variant="outline">
+                <ShieldCheck className="h-4 w-4" /> 
+                <span className="sr-only">Validate resume according to locale preset</span>
+                Validate preset
+              </Button>
+              <Button className="btn-cta" onClick={saveResume} disabled={saving}>
+                <Save className="h-4 w-4" /> 
+                <span className="sr-only">Save current resume draft</span>
+                {saving ? "Saving..." : "Save Draft"}
+              </Button>
+            </div>
+          </nav>
         </div>
       </header>
 
-      <main className="container-xl grid grid-cols-12 gap-6 py-6">
+      <main className="container-xl grid grid-cols-12 gap-6 py-6" id="main-content" ref={mainContentRef} tabIndex={-1} role="main">
         <div className="col-span-12 lg:col-span-7 space-y-6">
           {leftOrder.map((key) => Sections[key]).filter(Boolean)}
         </div>
 
         {/* Right column: ATS & Preset info */}
-        <div className="col-span-12 lg:col-span-5 space-y-6">
+        <div className="col-span-12 lg:col-span-5 space-y-6" role="complementary" aria-label="Resume tools and information">
           <Card className="section card-hover">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 h-heading"><BadgeCheck className="h-5 w-5 text-slate-700" /> Live ATS Heuristic</CardTitle>
+              <CardTitle className="flex items-center gap-2 h-heading">
+                <BadgeCheck className="h-5 w-5 text-slate-700" /> 
+                Live ATS Heuristic
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-semibold">
+              <div className="text-3xl font-semibold" role="status" aria-live="polite">
                 Score: <span className={scoreColor}>{ats.score}</span>/100
               </div>
-              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600">
+              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600" role="list">
                 {ats.hints.map((h, i) => (<li key={i}>{h}</li>))}
                 {ats.hints.length === 0 ? <li>Looks solid. Keep quantifying impact.</li> : null}
               </ul>
               {validation?.issues?.length > 0 && (
                 <div className="mt-4">
                   <div className="font-medium h-heading">Locale Validation</div>
-                  <ul className="list-disc pl-5 text-sm text-slate-600 mt-1">
+                  <ul className="list-disc pl-5 text-sm text-slate-600 mt-1" role="list">
                     {validation.issues.map((x, i) => (<li key={i}>{x}</li>))}
                   </ul>
                 </div>
