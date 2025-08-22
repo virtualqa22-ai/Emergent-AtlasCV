@@ -17,6 +17,11 @@ import CookieConsentBanner from "./components/privacy/CookieConsentBanner";
 import PrivacySettings from "./components/privacy/PrivacySettings";
 import { useLocalOnlyMode } from "./hooks/useLocalStorage";
 
+// Phase 8 Live Preview Components
+import ResumePreview from "./components/resume/ResumePreview";
+import TemplateSelector from "./components/resume/TemplateSelector";
+import { useDebounce } from "./hooks/useDebounce";
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
