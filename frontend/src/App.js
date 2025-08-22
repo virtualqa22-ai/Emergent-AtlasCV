@@ -171,15 +171,18 @@ function Home() {
   };
 
   const handleConsentChange = useCallback((consentData) => {
-    // Only update if consent actually changed
-    if (!cookieConsent || JSON.stringify(cookieConsent) !== JSON.stringify(consentData)) {
-      setCookieConsent(consentData);
-      // Handle analytics/marketing consent here only on actual change
-      if (consentData.preferences?.analytics && !cookieConsent?.preferences?.analytics) {
-        console.log("Analytics enabled");
+    setCookieConsent(prevConsent => {
+      // Only update if consent actually changed
+      if (!prevConsent || JSON.stringify(prevConsent) !== JSON.stringify(consentData)) {
+        // Handle analytics/marketing consent here only on actual change
+        if (consentData.preferences?.analytics && !prevConsent?.preferences?.analytics) {
+          console.log("Analytics enabled");
+        }
+        return consentData;
       }
-    }
-  }, [cookieConsent]);
+      return prevConsent;
+    });
+  }, []);
 
   const validateLocale = async () => {
     try {
