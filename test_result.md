@@ -408,9 +408,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 6 Template System: All 3 endpoints tested and working"
-    - "Phase 6 Collaboration System: All 8 endpoints tested and working"
-    - "Integration: Template application and collaboration workflows tested"
+    - "Phase 6 Templates: Template gallery, selection, and application"
+    - "Phase 6 Collaboration: Share links, comments, suggestions with complete UI"
+    - "Phase 6 Shared Resume View: /share/{token} route with full functionality"
+    - "Phase 6 Accessibility: WCAG 2.1 AA compliance implementation"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
