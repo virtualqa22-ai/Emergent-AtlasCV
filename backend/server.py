@@ -74,6 +74,33 @@ class ResumeProject(BaseModel):
     tech: List[str] = []
     link: str = ""
 
+# Phase 9: New optional sections
+class ResumeCertification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    issuer: str = ""
+    issue_date: str = ""
+    expiry_date: Optional[str] = None
+    credential_id: str = ""
+    credential_url: str = ""
+
+class ResumeReference(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    title: str = ""
+    company: str = ""
+    email: str = ""
+    phone: str = ""
+    relationship: str = ""  # "Manager", "Colleague", "Professor", etc.
+
+class ResumePersonalDetail(BaseModel):
+    nationality: str = ""
+    visa_status: str = ""
+    languages: List[str] = []
+    hobbies: List[str] = []
+    volunteer_work: str = ""
+    awards: List[str] = []
+
 class Resume(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     locale: str = Field(default="IN")  # IN, US, EU, AU, JP-R, JP-S
