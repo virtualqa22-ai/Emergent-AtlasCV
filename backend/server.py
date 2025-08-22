@@ -677,6 +677,381 @@ async def score_resume(resume_id: str):
     data = Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
     return compute_heuristic_score(data)
 
+# -----------------------
+# Import/Export (Phase 5)
+# -----------------------
+class ImportResponse(BaseModel):
+    success: bool
+    message: str
+    extracted_data: Optional[Resume] = None
+    warnings: List[str] = []
+
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
+
+def extract_resume_data_from_pdf(file_content: bytes) -> Dict[str, Any]:
+    """Extract resume data from PDF using pdfplumber"""
+    extracted = {
+        "contact": {"full_name": "", "email": "", "phone": "", "city": "", "state": "", "country": "India", "linkedin": "", "website": ""},
+        "summary": "",
+        "skills": [],
+        "experience": [],
+        "education": [],
+        "projects": []
+    }
+    
+    try:
+        with pdfplumber.open(io.BytesIO(file_content)) as pdf:
+            text = ""
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        
+        if not text.strip():
+            return extracted
+        
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        
+        # Extract email and phone patterns
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        phone_pattern = r'[\+]?[1-9]?[0-9]{7,15}'
+        
+        emails = re.findall(email_pattern, text)
+        phones = re.findall(phone_pattern, text)
+        
+        if emails:
+            extracted["contact"]["email"] = emails[0]
+        if phones:
+            extracted["contact"]["phone"] = phones[0]
+        
+        # Basic name extraction (first non-empty line likely contains name)
+        if lines:
+            potential_name = lines[0]
+            # Remove common resume headers
+            if not any(keyword in potential_name.lower() for keyword in ['resume', 'cv', 'curriculum']):
+                extracted["contact"]["full_name"] = potential_name
+        
+        # Look for sections
+        experience_keywords = ['experience', 'work experience', 'employment', 'professional experience']
+        education_keywords = ['education', 'academic', 'qualifications', 'university', 'college']
+        skills_keywords = ['skills', 'technical skills', 'competencies', 'technologies']
+        
+        current_section = None
+        current_content = []
+        
+        for line in lines[1:]:  # Skip first line (likely name)
+            line_lower = line.lower()
+            
+            # Detect section headers
+            if any(keyword in line_lower for keyword in experience_keywords):
+                if current_section and current_content:
+                    process_section_content(extracted, current_section, current_content)
+                current_section = 'experience'
+                current_content = []
+            elif any(keyword in line_lower for keyword in education_keywords):
+                if current_section and current_content:
+                    process_section_content(extracted, current_section, current_content)
+                current_section = 'education'
+                current_content = []
+            elif any(keyword in line_lower for keyword in skills_keywords):
+                if current_section and current_content:
+                    process_section_content(extracted, current_section, current_content)
+                current_section = 'skills'
+                current_content = []
+            elif line_lower in ['summary', 'objective', 'profile', 'about']:
+                if current_section and current_content:
+                    process_section_content(extracted, current_section, current_content)
+                current_section = 'summary'
+                current_content = []
+            else:
+                if current_section:
+                    current_content.append(line)
+                elif not extracted["summary"] and len(line) > 20:
+                    # If no section detected yet, treat as summary
+                    extracted["summary"] = line
+        
+        # Process final section
+        if current_section and current_content:
+            process_section_content(extracted, current_section, current_content)
+        
+        return extracted
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"PDF extraction failed: {e}")
+        return extracted
+
+def process_section_content(extracted: Dict[str, Any], section: str, content: List[str]):
+    """Process extracted section content"""
+    if section == 'summary':
+        extracted["summary"] = ' '.join(content)
+    elif section == 'skills':
+        # Extract skills from text
+        skills_text = ' '.join(content)
+        # Simple comma/bullet separation
+        skills = []
+        for delimiter in [',', '•', '·', '|', '\n']:
+            if delimiter in skills_text:
+                skills = [s.strip() for s in skills_text.split(delimiter) if s.strip()]
+                break
+        if not skills:
+            skills = skills_text.split()
+        extracted["skills"] = [s for s in skills[:15] if len(s) > 1]  # Limit and filter
+    elif section == 'experience':
+        # Simple experience extraction
+        exp_entry = {
+            "id": str(uuid.uuid4()),
+            "company": "",
+            "title": "", 
+            "city": "",
+            "start_date": "",
+            "end_date": "",
+            "bullets": []
+        }
+        
+        # Look for company/title patterns
+        for line in content:
+            if not exp_entry["company"] and not exp_entry["title"]:
+                # First meaningful line likely has company/title
+                exp_entry["title"] = line
+            else:
+                exp_entry["bullets"].append(line)
+        
+        if exp_entry["title"] or exp_entry["bullets"]:
+            extracted["experience"].append(exp_entry)
+    elif section == 'education':
+        # Simple education extraction
+        edu_entry = {
+            "id": str(uuid.uuid4()),
+            "institution": "",
+            "degree": "",
+            "start_date": "",
+            "end_date": "",
+            "details": ""
+        }
+        
+        if content:
+            edu_entry["institution"] = content[0] if content else ""
+            edu_entry["degree"] = content[1] if len(content) > 1 else ""
+            edu_entry["details"] = ' '.join(content[2:]) if len(content) > 2 else ""
+        
+        if edu_entry["institution"] or edu_entry["degree"]:
+            extracted["education"].append(edu_entry)
+
+def generate_pdf_resume(resume: Resume) -> bytes:
+    """Generate PDF from resume data with preset styling"""
+    buffer = io.BytesIO()
+    preset = PRESETS.get(resume.locale, PRESETS["IN"])
+    
+    # Use A4 for most countries, Letter for US
+    page_size = letter if resume.locale == "US" else A4
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=0.75*inch, rightMargin=0.75*inch, 
+                           topMargin=0.75*inch, bottomMargin=0.75*inch)
+    
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=12, alignment=TA_CENTER)
+    heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=12, spaceAfter=6, textColor=colors.darkblue)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=10, spaceAfter=3)
+    contact_style = ParagraphStyle('ContactStyle', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER)
+    
+    story = []
+    
+    # Header with name and contact
+    if resume.contact.full_name:
+        story.append(Paragraph(resume.contact.full_name, title_style))
+    
+    # Contact information
+    contact_parts = []
+    if resume.contact.email:
+        contact_parts.append(resume.contact.email)
+    if resume.contact.phone:
+        contact_parts.append(resume.contact.phone)
+    if resume.contact.city:
+        location = resume.contact.city
+        if resume.contact.state:
+            location += f", {resume.contact.state}"
+        contact_parts.append(location)
+    if resume.contact.linkedin:
+        contact_parts.append(resume.contact.linkedin)
+    
+    if contact_parts:
+        story.append(Paragraph(" | ".join(contact_parts), contact_style))
+        story.append(Spacer(1, 12))
+    
+    # Section order based on preset
+    section_order = preset.get("section_order", ["summary", "experience", "education", "skills", "projects"])
+    labels = preset.get("labels", {})
+    
+    for section in section_order:
+        if section == "profile" or section == "jd":
+            continue  # Skip UI-only sections
+            
+        if section == "summary" and resume.summary:
+            story.append(Paragraph(labels.get("summary", "Professional Summary"), heading_style))
+            story.append(Paragraph(resume.summary, normal_style))
+            story.append(Spacer(1, 12))
+            
+        elif section == "skills" and resume.skills:
+            story.append(Paragraph("Skills", heading_style))
+            skills_text = ", ".join(resume.skills)
+            story.append(Paragraph(skills_text, normal_style))
+            story.append(Spacer(1, 12))
+            
+        elif section == "experience" and resume.experience:
+            story.append(Paragraph(labels.get("experience", "Experience"), heading_style))
+            for exp in resume.experience:
+                # Experience header
+                exp_header = []
+                if exp.title:
+                    exp_header.append(f"<b>{exp.title}</b>")
+                if exp.company:
+                    exp_header.append(exp.company)
+                if exp.city:
+                    exp_header.append(exp.city)
+                
+                header_text = " | ".join(exp_header)
+                if exp.start_date or exp.end_date:
+                    date_range = f"{exp.start_date or ''} - {exp.end_date or 'Present'}"
+                    header_text += f" ({date_range})"
+                
+                story.append(Paragraph(header_text, normal_style))
+                
+                # Bullets
+                for bullet in exp.bullets:
+                    story.append(Paragraph(f"• {bullet}", normal_style))
+                story.append(Spacer(1, 6))
+                
+        elif section == "education" and resume.education:
+            story.append(Paragraph(labels.get("education", "Education"), heading_style))
+            for edu in resume.education:
+                edu_parts = []
+                if edu.degree:
+                    edu_parts.append(f"<b>{edu.degree}</b>")
+                if edu.institution:
+                    edu_parts.append(edu.institution)
+                
+                edu_text = " | ".join(edu_parts)
+                if edu.start_date or edu.end_date:
+                    date_range = f"{edu.start_date or ''} - {edu.end_date or 'Present'}"
+                    edu_text += f" ({date_range})"
+                
+                story.append(Paragraph(edu_text, normal_style))
+                if edu.details:
+                    story.append(Paragraph(edu.details, normal_style))
+                story.append(Spacer(1, 6))
+                
+        elif section == "projects" and resume.projects:
+            story.append(Paragraph("Projects", heading_style))
+            for proj in resume.projects:
+                proj_header = []
+                if proj.name:
+                    proj_header.append(f"<b>{proj.name}</b>")
+                if proj.tech:
+                    proj_header.append(f"({', '.join(proj.tech)})")
+                if proj.link:
+                    proj_header.append(proj.link)
+                
+                story.append(Paragraph(" | ".join(proj_header), normal_style))
+                if proj.description:
+                    story.append(Paragraph(proj.description, normal_style))
+                story.append(Spacer(1, 6))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+@api_router.post("/import/upload", response_model=ImportResponse)
+async def import_resume(file: UploadFile = File(...)):
+    """Import resume from PDF file"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    # Check file type
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    
+    # Check file size
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File size exceeds {MAX_UPLOAD_SIZE // (1024*1024)}MB limit")
+    
+    try:
+        # Extract data from PDF
+        extracted_data = extract_resume_data_from_pdf(content)
+        
+        # Create Resume object
+        resume = Resume(**extracted_data)
+        
+        warnings = []
+        if not resume.contact.full_name:
+            warnings.append("No name detected in the PDF")
+        if not resume.contact.email:
+            warnings.append("No email address found")
+        if not resume.experience:
+            warnings.append("No work experience detected")
+        
+        return ImportResponse(
+            success=True,
+            message=f"Successfully parsed resume from {file.filename}",
+            extracted_data=resume,
+            warnings=warnings
+        )
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Import failed: {e}")
+        return ImportResponse(
+            success=False,
+            message=f"Failed to parse PDF: {str(e)}",
+            warnings=["PDF parsing failed - please check file format"]
+        )
+
+@api_router.get("/export/pdf/{resume_id}")
+async def export_resume_pdf(resume_id: str):
+    """Export resume as PDF with preset styling"""
+    # Get resume
+    found = await db.resumes.find_one({"id": resume_id})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    resume = Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    try:
+        # Generate PDF
+        pdf_content = generate_pdf_resume(resume)
+        
+        # Return PDF response
+        from fastapi.responses import Response
+        filename = f"resume_{resume.contact.full_name or 'AtlasCV'}_{resume.locale}.pdf".replace(" ", "_")
+        
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"PDF export failed: {e}")
+        raise HTTPException(status_code=500, detail="PDF generation failed")
+
+@api_router.post("/export/json/{resume_id}")
+async def export_resume_json(resume_id: str):
+    """Export resume as JSON"""
+    found = await db.resumes.find_one({"id": resume_id})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    resume = Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    from fastapi.responses import Response
+    filename = f"resume_{resume.contact.full_name or 'AtlasCV'}_{resume.locale}.json".replace(" ", "_")
+    
+    return Response(
+        content=resume.model_dump_json(indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 
