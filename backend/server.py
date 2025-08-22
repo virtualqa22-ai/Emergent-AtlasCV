@@ -25,6 +25,9 @@ client = AsyncIOMotorClient(mongo_url)
 db_name = os.environ.get('DB_NAME', 'test_database')
 db = client[db_name]
 
+# Initialize GDPR compliance helper
+gdpr_compliance = GDPRCompliance(db)
+
 # Create the main app without a prefix
 app = FastAPI(title="AtlasCV API")
 
