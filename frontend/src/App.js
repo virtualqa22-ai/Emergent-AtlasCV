@@ -127,6 +127,32 @@ function Home() {
   const addArrayItem = (key, item) => setForm((p) => ({ ...p, [key]: [...p[key], item] }));
   const removeArrayItem = (key, idx) => setForm((p) => ({ ...p, [key]: p[key].filter((_, i) => i !== idx) }));
 
+  // Phase 9: Load optional field configuration for current locale
+  const loadOptionalFieldsConfig = async (locale) => {
+    try {
+      const response = await axios.get(`${API}/presets/${locale}/optional-fields`);
+      const config = response.data;
+      setOptionalFieldsConfig(config);
+      
+      // Update visible fields based on locale defaults
+      const newVisibleFields = {};
+      Object.entries(config.optional_fields || {}).forEach(([field, isAllowed]) => {
+        // Show field if it's allowed and commonly used in this locale
+        newVisibleFields[field] = isAllowed && (
+          (field === 'photo' && ['JP-R', 'IN', 'EU', 'SG', 'AE'].includes(locale)) ||
+          (field === 'certifications' && isAllowed) ||
+          (field === 'personal_details' && ['IN', 'SG', 'AE', 'CA', 'EU', 'AU'].includes(locale)) ||
+          (field === 'references' && ['AU', 'CA', 'US', 'EU'].includes(locale)) ||
+          (field === 'date_of_birth' && ['JP-R', 'IN', 'SG', 'AE', 'EU'].includes(locale))
+        );
+      });
+      
+      setVisibleOptionalFields(newVisibleFields);
+    } catch (error) {
+      console.error('Failed to load optional fields config:', error);
+    }
+  };
+
   useEffect(() => {
     const boot = async () => {
       try {
@@ -146,6 +172,9 @@ function Home() {
         const map = {};
         (pre.data.presets || []).forEach((p) => { map[p.code] = p; });
         setPresets(map);
+        
+        // Load initial optional fields config
+        await loadOptionalFieldsConfig(form.locale);
       } catch(e) { 
         console.error(e);
         // If API fails and we're in local mode, still show UI
@@ -156,6 +185,13 @@ function Home() {
     };
     boot();
   }, [isLocalMode, getLocalResume]);
+  
+  // Phase 9: Update optional fields when locale changes
+  useEffect(() => {
+    if (form.locale) {
+      loadOptionalFieldsConfig(form.locale);
+    }
+  }, [form.locale]);
 
   const saveResume = async () => {
     setSaving(true);
