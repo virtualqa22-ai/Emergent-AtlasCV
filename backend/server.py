@@ -126,6 +126,10 @@ class ResumeCreate(BaseModel):
     experience: Optional[List[ResumeExperience]] = None
     education: Optional[List[ResumeEducation]] = None
     projects: Optional[List[ResumeProject]] = None
+    # Phase 9: Optional sections
+    certifications: Optional[List[ResumeCertification]] = None
+    references: Optional[List[ResumeReference]] = None
+    personal_details: Optional[ResumePersonalDetail] = None
     extras: Optional[Dict[str, Any]] = None
 
 class ResumeUpdate(ResumeCreate):
