@@ -98,14 +98,20 @@ const ModernTemplate = ({ data }) => {
             <div key={exp.id || idx} className="mb-6">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{exp.position}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{exp.title}</h3>
                   <p className="text-base font-medium text-gray-700">{exp.company}</p>
                 </div>
                 <span className="text-sm text-gray-600 whitespace-nowrap">
                   {exp.start_date} - {exp.end_date || 'Present'}
                 </span>
               </div>
-              {exp.description && (
+              {exp.bullets?.length > 0 ? (
+                <ul className="text-gray-700 ml-2 list-disc list-inside">
+                  {exp.bullets.map((bullet, bulletIdx) => (
+                    <li key={bulletIdx} className="mb-1">{bullet}</li>
+                  ))}
+                </ul>
+              ) : exp.description && (
                 <div className="text-gray-700 ml-2">
                   {exp.description.split('\n').map((line, lineIdx) => (
                     <p key={lineIdx} className="mb-1">{line}</p>
