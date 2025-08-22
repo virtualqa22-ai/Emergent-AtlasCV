@@ -602,7 +602,11 @@ startxref
         print("   ✅ Step 4: JSON export successful")
         
         # Verify data consistency
-        json_data = json_export_response.json()
+        if hasattr(json_export_response, 'json'):
+            json_data = json_export_response.json()
+        else:
+            json_data = json_export_response
+            
         original_name = extracted_resume.get('contact', {}).get('full_name', '')
         exported_name = json_data.get('contact', {}).get('full_name', '')
         
