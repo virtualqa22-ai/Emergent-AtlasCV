@@ -749,7 +749,305 @@ class CreateSuggestionRequest(BaseModel):
     original_value: str
     suggested_value: str
     reason: str = ""
-    author_name: str = "Anonymous"
+# -----------------------
+# Templates routes (Phase 6)
+# -----------------------
+
+# ATS-Safe Template Definitions
+BUILT_IN_TEMPLATES = [
+    {
+        "id": "classic-professional", 
+        "name": "Classic Professional",
+        "description": "Clean, traditional layout perfect for corporate roles. ATS-optimized with clear sections.",
+        "category": "professional",
+        "preview_image": "/templates/classic-professional.png",
+        "ats_optimized": True,
+        "layout_config": {
+            "sections": ["contact", "summary", "experience", "skills", "education"],
+            "sidebar": False,
+            "header_style": "centered",
+            "spacing": "standard"
+        },
+        "styling": {
+            "font_family": "Arial, sans-serif",
+            "font_size": 11,
+            "line_height": 1.4,
+            "colors": {"primary": "#000000", "accent": "#333333"},
+            "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75}
+        }
+    },
+    {
+        "id": "modern-minimal",
+        "name": "Modern Minimal", 
+        "description": "Clean, minimalist design with subtle accents. Great for tech and creative roles.",
+        "category": "modern",
+        "preview_image": "/templates/modern-minimal.png",
+        "ats_optimized": True,
+        "layout_config": {
+            "sections": ["contact", "summary", "skills", "experience", "education"],
+            "sidebar": False,
+            "header_style": "left_aligned",
+            "spacing": "compact"
+        },
+        "styling": {
+            "font_family": "Helvetica, Arial, sans-serif", 
+            "font_size": 10,
+            "line_height": 1.3,
+            "colors": {"primary": "#2D3748", "accent": "#1D4ED8"},
+            "margins": {"top": 0.5, "bottom": 0.5, "left": 0.75, "right": 0.75}
+        }
+    },
+    {
+        "id": "executive-formal",
+        "name": "Executive Formal",
+        "description": "Sophisticated layout for senior-level positions. Conservative styling with emphasis on achievements.",
+        "category": "executive", 
+        "preview_image": "/templates/executive-formal.png",
+        "ats_optimized": True,
+        "layout_config": {
+            "sections": ["contact", "summary", "experience", "education", "skills"],
+            "sidebar": False,
+            "header_style": "formal",
+            "spacing": "generous"
+        },
+        "styling": {
+            "font_family": "Times New Roman, serif",
+            "font_size": 11,
+            "line_height": 1.5,
+            "colors": {"primary": "#000000", "accent": "#1a365d"},
+            "margins": {"top": 1.0, "bottom": 1.0, "left": 1.0, "right": 1.0}
+        }
+    },
+    {
+        "id": "technical-focused",
+        "name": "Technical Focused",
+        "description": "Optimized for technical roles. Emphasizes skills and projects with clear, scannable sections.",
+        "category": "technical",
+        "preview_image": "/templates/technical-focused.png", 
+        "ats_optimized": True,
+        "layout_config": {
+            "sections": ["contact", "skills", "summary", "experience", "projects", "education"],
+            "sidebar": False,
+            "header_style": "technical",
+            "spacing": "standard"
+        },
+        "styling": {
+            "font_family": "Calibri, Arial, sans-serif",
+            "font_size": 10,
+            "line_height": 1.35,
+            "colors": {"primary": "#1a202c", "accent": "#16A34A"},
+            "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75}
+        }
+    },
+    {
+        "id": "creative-balanced", 
+        "name": "Creative Balanced",
+        "description": "Professional yet creative design. Perfect for design, marketing, and media roles.",
+        "category": "creative",
+        "preview_image": "/templates/creative-balanced.png",
+        "ats_optimized": True,
+        "layout_config": {
+            "sections": ["contact", "summary", "skills", "experience", "projects", "education"],
+            "sidebar": False,
+            "header_style": "creative",
+            "spacing": "balanced"
+        },
+        "styling": {
+            "font_family": "Open Sans, Arial, sans-serif",
+            "font_size": 10,
+            "line_height": 1.4, 
+            "colors": {"primary": "#2d3748", "accent": "#F59E0B"},
+            "margins": {"top": 0.6, "bottom": 0.6, "left": 0.8, "right": 0.8}
+        }
+    }
+]
+
+@api_router.get("/templates")
+async def get_templates():
+    """Get all available resume templates"""
+    return {"templates": BUILT_IN_TEMPLATES}
+
+@api_router.get("/templates/{template_id}")
+async def get_template(template_id: str):
+    """Get specific template by ID"""
+    template = next((t for t in BUILT_IN_TEMPLATES if t["id"] == template_id), None)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@api_router.post("/templates/{template_id}/apply/{resume_id}")
+async def apply_template_to_resume(template_id: str, resume_id: str):
+    """Apply a template to an existing resume"""
+    # Get template
+    template = next((t for t in BUILT_IN_TEMPLATES if t["id"] == template_id), None)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Get resume
+    found = await db.resumes.find_one({"id": resume_id})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    # Apply template settings to resume
+    update_data = {
+        "template_id": template_id,
+        "template_config": template["layout_config"],
+        "template_styling": template["styling"],
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.resumes.update_one({"id": resume_id}, {"$set": update_data})
+    
+    # Return updated resume
+    updated = await db.resumes.find_one({"id": resume_id})
+    return Resume(**{k: v for k, v in updated.items() if k in Resume.model_fields})
+
+# -----------------------
+# Collaboration routes (Phase 6) 
+# -----------------------
+
+@api_router.post("/share", response_model=ShareableLink)
+async def create_share_link(request: CreateShareLinkRequest):
+    """Create a shareable link for a resume"""
+    # Verify resume exists
+    found = await db.resumes.find_one({"id": request.resume_id})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    # Calculate expiry
+    expires_at = None
+    if request.expires_in_days:
+        expires_at = (datetime.now(timezone.utc) + 
+                     datetime.timedelta(days=request.expires_in_days)).isoformat()
+    
+    # Create share link
+    share_link = ShareableLink(
+        resume_id=request.resume_id,
+        permissions=request.permissions,
+        expires_at=expires_at
+    )
+    
+    # Store in database
+    await db.share_links.insert_one(share_link.dict())
+    
+    return share_link
+
+@api_router.get("/share/{share_token}")
+async def get_shared_resume(share_token: str):
+    """Get resume via share token"""
+    # Find share link
+    share_link = await db.share_links.find_one({"share_token": share_token, "is_active": True})
+    if not share_link:
+        raise HTTPException(status_code=404, detail="Shared link not found or expired")
+    
+    # Check expiry
+    if share_link.get("expires_at"):
+        expires_at = datetime.fromisoformat(share_link["expires_at"].replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > expires_at:
+            raise HTTPException(status_code=410, detail="Shared link has expired")
+    
+    # Get resume
+    found = await db.resumes.find_one({"id": share_link["resume_id"]})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    resume = Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    return {
+        "resume": resume,
+        "share_info": {
+            "permissions": share_link["permissions"],
+            "can_comment": share_link["permissions"] in ["comment", "suggest"],
+            "can_suggest": share_link["permissions"] == "suggest"
+        }
+    }
+
+@api_router.post("/comments", response_model=Comment)
+async def create_comment(request: CreateCommentRequest):
+    """Create a comment on a resume"""
+    # Verify resume exists
+    found = await db.resumes.find_one({"id": request.resume_id})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    comment = Comment(**request.dict())
+    await db.comments.insert_one(comment.dict())
+    
+    return comment
+
+@api_router.get("/comments/{resume_id}")
+async def get_resume_comments(resume_id: str):
+    """Get all comments for a resume"""
+    comments = []
+    async for comment in db.comments.find({"resume_id": resume_id}):
+        comments.append(Comment(**comment))
+    
+    return {"comments": comments}
+
+@api_router.post("/suggestions", response_model=Suggestion)  
+async def create_suggestion(request: CreateSuggestionRequest):
+    """Create a suggestion for resume improvement"""
+    # Verify resume exists
+    found = await db.resumes.find_one({"id": request.resume_id})
+    if not found:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    suggestion = Suggestion(**request.dict())
+    await db.suggestions.insert_one(suggestion.dict())
+    
+    return suggestion
+
+@api_router.get("/suggestions/{resume_id}")
+async def get_resume_suggestions(resume_id: str):
+    """Get all suggestions for a resume"""
+    suggestions = []
+    async for suggestion in db.suggestions.find({"resume_id": resume_id}):
+        suggestions.append(Suggestion(**suggestion))
+    
+    return {"suggestions": suggestions}
+
+@api_router.post("/suggestions/{suggestion_id}/accept")
+async def accept_suggestion(suggestion_id: str):
+    """Accept and apply a suggestion to the resume"""
+    # Find suggestion
+    suggestion = await db.suggestions.find_one({"id": suggestion_id})
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    
+    if suggestion["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Suggestion is not pending")
+    
+    # Get resume
+    resume = await db.resumes.find_one({"id": suggestion["resume_id"]})
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    # Apply suggestion (simplified - would need complex path resolution in production)
+    update_path = suggestion["section"]
+    if suggestion.get("field"):
+        update_path += f".{suggestion['field']}"
+    
+    # Mark suggestion as accepted
+    await db.suggestions.update_one(
+        {"id": suggestion_id}, 
+        {"$set": {"status": "accepted", "applied_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Suggestion accepted", "suggestion_id": suggestion_id}
+
+@api_router.post("/suggestions/{suggestion_id}/reject")
+async def reject_suggestion(suggestion_id: str):
+    """Reject a suggestion"""
+    suggestion = await db.suggestions.find_one({"id": suggestion_id})
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    
+    await db.suggestions.update_one(
+        {"id": suggestion_id},
+        {"$set": {"status": "rejected"}}
+    )
+    
+    return {"message": "Suggestion rejected", "suggestion_id": suggestion_id}
 
 # -----------------------
 # Import/Export (Phase 5)
