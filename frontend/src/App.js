@@ -738,6 +738,64 @@ function Home() {
       <footer className="border-t bg-white/70">
         <div className="container-xl py-6 text-sm text-slate-600">© {new Date().getFullYear()} AtlasCV. ATS-safe builder.</div>
       </footer>
+
+      {/* Import Result Modal */}
+      {showImportModal && importResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                {importResult.success ? "Import Successful" : "Import Failed"}
+              </h2>
+              <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className={importResult.success ? "text-green-700" : "text-red-700"}>
+                {importResult.message}
+              </p>
+              
+              {importResult.warnings?.length > 0 && (
+                <div>
+                  <h3 className="font-medium text-amber-700 mb-2">Warnings:</h3>
+                  <ul className="list-disc pl-5 text-amber-600 text-sm space-y-1">
+                    {importResult.warnings.map((warning, i) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {importResult.success && importResult.extracted_data && (
+                <div>
+                  <h3 className="font-medium mb-2">Extracted Information:</h3>
+                  <div className="text-sm space-y-2 bg-slate-50 p-3 rounded">
+                    <p><strong>Name:</strong> {importResult.extracted_data.contact?.full_name || "Not detected"}</p>
+                    <p><strong>Email:</strong> {importResult.extracted_data.contact?.email || "Not detected"}</p>
+                    <p><strong>Phone:</strong> {importResult.extracted_data.contact?.phone || "Not detected"}</p>
+                    <p><strong>Skills:</strong> {importResult.extracted_data.skills?.length || 0} detected</p>
+                    <p><strong>Experience:</strong> {importResult.extracted_data.experience?.length || 0} entries</p>
+                    <p><strong>Education:</strong> {importResult.extracted_data.education?.length || 0} entries</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <Button onClick={() => setShowImportModal(false)} variant="outline">
+                Cancel
+              </Button>
+              {importResult.success && (
+                <Button onClick={applyImportedData} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Apply Imported Data
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
