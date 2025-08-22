@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,6 +11,10 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 import re
+
+# Import our privacy utilities
+from .encryption_utils import privacy_encryption
+from .gdpr_utils import GDPRCompliance
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
