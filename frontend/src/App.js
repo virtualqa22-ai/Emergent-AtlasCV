@@ -571,6 +571,267 @@ function Home() {
         </CardContent>
       </Card>
     ),
+    
+    // Phase 9: New Optional Sections
+    certifications: visibleOptionalFields.certifications ? (
+      <Card className="section card-hover" key="certifications">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 h-heading">
+            <Award className="h-5 w-5" />
+            {optionalFieldsConfig.labels?.certifications || 'Certifications'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(form.certifications || []).map((cert, idx) => (
+            <div key={cert.id} className="rounded-lg border p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input 
+                  placeholder="Certification Name" 
+                  value={cert.name} 
+                  onChange={(e) => { 
+                    const copy = [...(form.certifications || [])]; 
+                    copy[idx].name = e.target.value; 
+                    setForm({ ...form, certifications: copy }); 
+                  }} 
+                />
+                <Input 
+                  placeholder="Issuing Organization" 
+                  value={cert.issuer} 
+                  onChange={(e) => { 
+                    const copy = [...(form.certifications || [])]; 
+                    copy[idx].issuer = e.target.value; 
+                    setForm({ ...form, certifications: copy }); 
+                  }} 
+                />
+                <Input 
+                  placeholder="Issue Date (YYYY-MM)" 
+                  value={cert.issue_date} 
+                  onChange={(e) => { 
+                    const copy = [...(form.certifications || [])]; 
+                    copy[idx].issue_date = e.target.value; 
+                    setForm({ ...form, certifications: copy }); 
+                  }} 
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                <Input 
+                  placeholder="Credential ID (optional)" 
+                  value={cert.credential_id} 
+                  onChange={(e) => { 
+                    const copy = [...(form.certifications || [])]; 
+                    copy[idx].credential_id = e.target.value; 
+                    setForm({ ...form, certifications: copy }); 
+                  }} 
+                />
+                <Input 
+                  placeholder="Credential URL (optional)" 
+                  value={cert.credential_url} 
+                  onChange={(e) => { 
+                    const copy = [...(form.certifications || [])]; 
+                    copy[idx].credential_url = e.target.value; 
+                    setForm({ ...form, certifications: copy }); 
+                  }} 
+                />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button variant="ghost" onClick={() => removeArrayItem("certifications", idx)}>Remove</Button>
+              </div>
+            </div>
+          ))}
+          <Button onClick={() => addArrayItem("certifications", { 
+            id: crypto.randomUUID(), 
+            name: "", 
+            issuer: "", 
+            issue_date: "", 
+            expiry_date: "", 
+            credential_id: "", 
+            credential_url: "" 
+          })}>
+            Add Certification
+          </Button>
+        </CardContent>
+      </Card>
+    ) : null,
+
+    references: visibleOptionalFields.references ? (
+      <Card className="section card-hover" key="references">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 h-heading">
+            <Users className="h-5 w-5" />
+            {optionalFieldsConfig.labels?.references || 'References'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(form.references || []).map((ref, idx) => (
+            <div key={ref.id} className="rounded-lg border p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input 
+                  placeholder="Reference Name" 
+                  value={ref.name} 
+                  onChange={(e) => { 
+                    const copy = [...(form.references || [])]; 
+                    copy[idx].name = e.target.value; 
+                    setForm({ ...form, references: copy }); 
+                  }} 
+                />
+                <Input 
+                  placeholder="Title/Position" 
+                  value={ref.title} 
+                  onChange={(e) => { 
+                    const copy = [...(form.references || [])]; 
+                    copy[idx].title = e.target.value; 
+                    setForm({ ...form, references: copy }); 
+                  }} 
+                />
+                <Input 
+                  placeholder="Company" 
+                  value={ref.company} 
+                  onChange={(e) => { 
+                    const copy = [...(form.references || [])]; 
+                    copy[idx].company = e.target.value; 
+                    setForm({ ...form, references: copy }); 
+                  }} 
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <Input 
+                  placeholder="Email" 
+                  type="email"
+                  value={ref.email} 
+                  onChange={(e) => { 
+                    const copy = [...(form.references || [])]; 
+                    copy[idx].email = e.target.value; 
+                    setForm({ ...form, references: copy }); 
+                  }} 
+                />
+                <Input 
+                  placeholder="Phone" 
+                  value={ref.phone} 
+                  onChange={(e) => { 
+                    const copy = [...(form.references || [])]; 
+                    copy[idx].phone = e.target.value; 
+                    setForm({ ...form, references: copy }); 
+                  }} 
+                />
+                <Select 
+                  value={ref.relationship} 
+                  onValueChange={(v) => { 
+                    const copy = [...(form.references || [])]; 
+                    copy[idx].relationship = v; 
+                    setForm({ ...form, references: copy }); 
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Relationship" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Manager">Manager</SelectItem>
+                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                    <SelectItem value="Colleague">Colleague</SelectItem>
+                    <SelectItem value="Professor">Professor</SelectItem>
+                    <SelectItem value="Client">Client</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button variant="ghost" onClick={() => removeArrayItem("references", idx)}>Remove</Button>
+              </div>
+            </div>
+          ))}
+          <Button onClick={() => addArrayItem("references", { 
+            id: crypto.randomUUID(), 
+            name: "", 
+            title: "", 
+            company: "", 
+            email: "", 
+            phone: "", 
+            relationship: "" 
+          })}>
+            Add Reference
+          </Button>
+        </CardContent>
+      </Card>
+    ) : null,
+
+    personal_details: visibleOptionalFields.personal_details ? (
+      <Card className="section card-hover" key="personal_details">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 h-heading">
+            <Globe className="h-5 w-5" />
+            Personal Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Nationality</Label>
+              <Input 
+                className="mt-1" 
+                value={form.personal_details?.nationality || ""} 
+                onChange={(e) => handleChange("personal_details.nationality", e.target.value)} 
+                placeholder="e.g., Indian, American" 
+              />
+            </div>
+            <div>
+              <Label>Visa Status</Label>
+              <Input 
+                className="mt-1" 
+                value={form.personal_details?.visa_status || ""} 
+                onChange={(e) => handleChange("personal_details.visa_status", e.target.value)} 
+                placeholder="e.g., Work Permit, Citizen" 
+              />
+            </div>
+          </div>
+          
+          <div>
+            <Label>Languages</Label>
+            <Input 
+              className="mt-1" 
+              value={(form.personal_details?.languages || []).join(", ")} 
+              onChange={(e) => handleChange("personal_details.languages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} 
+              placeholder="English, Hindi, Spanish" 
+            />
+          </div>
+          
+          {visibleOptionalFields.hobbies && (
+            <div>
+              <Label className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Hobbies & Interests
+              </Label>
+              <Input 
+                className="mt-1" 
+                value={(form.personal_details?.hobbies || []).join(", ")} 
+                onChange={(e) => handleChange("personal_details.hobbies", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} 
+                placeholder="Reading, Photography, Traveling" 
+              />
+            </div>
+          )}
+          
+          <div>
+            <Label>Volunteer Work</Label>
+            <Textarea 
+              className="mt-1" 
+              rows={3}
+              value={form.personal_details?.volunteer_work || ""} 
+              onChange={(e) => handleChange("personal_details.volunteer_work", e.target.value)} 
+              placeholder="Describe any volunteer activities or community service" 
+            />
+          </div>
+          
+          <div>
+            <Label>Awards & Achievements</Label>
+            <Input 
+              className="mt-1" 
+              value={(form.personal_details?.awards || []).join(", ")} 
+              onChange={(e) => handleChange("personal_details.awards", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} 
+              placeholder="Best Employee 2024, Dean's List" 
+            />
+          </div>
+        </CardContent>
+      </Card>
+    ) : null,
   };
 
   const leftOrder = preset.section_order || ["profile","jd","summary","skills","experience","projects","education"];
