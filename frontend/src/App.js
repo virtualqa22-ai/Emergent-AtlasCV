@@ -109,8 +109,6 @@ function Home() {
     };
     boot();
   }, [isLocalMode, getLocalResume]);
-    boot();
-  }, []);
 
   const saveResume = async () => {
     setSaving(true);
