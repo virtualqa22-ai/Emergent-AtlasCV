@@ -103,8 +103,9 @@ class GDPRCompliance:
                         "deleted_at": datetime.now(timezone.utc).isoformat()
                     })
             
-            # Log the deletion for compliance
-            await self.db.gdpr_deletions.insert_one(deletion_log)
+            # Log the deletion for compliance (create clean log without ObjectId)
+            clean_deletion_log = {k: v for k, v in deletion_log.items()}
+            await self.db.gdpr_deletions.insert_one(clean_deletion_log)
             
             deletion_log["total_deleted"] = len(deletion_log["deleted_records"])
             return deletion_log
