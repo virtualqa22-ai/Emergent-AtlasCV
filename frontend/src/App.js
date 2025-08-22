@@ -797,7 +797,16 @@ function Home() {
           <CardTitle className="h-heading">{presets[form.locale]?.labels?.summary || 'Professional Summary'}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea className="mt-1" rows={5} value={form.summary} onChange={(e) => handleChange("summary", e.target.value)} placeholder="2–3 lines capturing scope, years, domains, and top skills relevant to the role." />
+          <Textarea 
+            className="mt-1" 
+            rows={5} 
+            value={form.summary} 
+            onChange={(e) => handleChange("summary", e.target.value)} 
+            placeholder="2–3 lines capturing scope, years, domains, and top skills relevant to the role."
+            aria-describedby="summary-help"
+            aria-label="Professional summary"
+          />
+          <div id="summary-help" className="sr-only">Write a brief professional summary highlighting your experience, skills, and career focus. This appears at the top of your resume.</div>
           <div className="mt-2 flex items-center gap-2">
             <Button variant="outline" onClick={lintSummaryAI} disabled={!form.summary?.trim() || lintSummary.loading}>
               {lintSummary.loading ? "Linting..." : "Lint with AI"}
