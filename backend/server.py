@@ -205,65 +205,182 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "US": {
         "label": "United States",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications"],
         "labels": {"experience": "Work Experience", "education": "Education"},
+        "optional_fields": {
+            "photo": False,  # Not allowed
+            "date_of_birth": False,  # Not recommended
+            "certifications": True,
+            "references": True,  # "Available upon request" is standard
+            "personal_details": False,
+            "hobbies": False
+        },
         "rules": [
             "No photo in resume",
             "Show city and state in Contact",
             "Use Month-Year dates (e.g., 2024-05)",
+            "References available upon request",
+        ],
+    },
+    "CA": {
+        "label": "Canada",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications"],
+        "labels": {"experience": "Work Experience", "education": "Education"},
+        "optional_fields": {
+            "photo": False,  # Not recommended
+            "date_of_birth": False,  # Prohibited for discrimination prevention
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Languages are important in Canada
+            "hobbies": False
+        },
+        "rules": [
+            "No photo required",
+            "Bilingual capabilities (English/French) important",
+            "Work permit status may be mentioned",
+            "Include relevant certifications",
         ],
     },
     "EU": {
         "label": "European Union (Europass)",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
         "labels": {"experience": "Experience", "education": "Education (Europass)"},
+        "optional_fields": {
+            "photo": True,  # Optional but common
+            "date_of_birth": True,  # Common in many EU countries
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Nationality, languages important
+            "hobbies": True  # Personal interests section common
+        },
         "rules": [
             "GDPR-friendly contact (avoid DOB unless asked)",
             "Optional photo toggle",
+            "Languages section important for EU mobility",
+            "Europass format compatibility",
         ],
     },
     "AU": {
         "label": "Australia",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "skills", "education", "projects"],
-        "labels": {"experience": "Employment History"},
+        "section_order": ["profile", "jd", "summary", "experience", "skills", "education", "projects", "certifications", "references"],
+        "labels": {"experience": "Employment History", "references": "Referees"},
+        "optional_fields": {
+            "photo": False,  # Not recommended
+            "date_of_birth": False,  # Not recommended
+            "certifications": True,
+            "references": True,  # Referees are standard
+            "personal_details": True,  # Visa status important
+            "hobbies": True  # Interests section common
+        },
         "rules": [
             "2–3 pages acceptable",
-            "Referees optional",
+            "Referees expected (usually 2-3)",
             "No photo",
             "Right-to-work statement optional",
+            "Include visa status if relevant",
         ],
     },
     "IN": {
         "label": "India",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "skills", "experience", "projects", "education"],
+        "section_order": ["profile", "jd", "summary", "skills", "experience", "projects", "education", "certifications", "personal_details"],
         "labels": {"experience": "Experience", "projects": "Projects (important)"},
+        "optional_fields": {
+            "photo": True,  # Optional but common
+            "date_of_birth": True,  # Common in Indian resumes
+            "certifications": True,
+            "references": False,  # Not standard practice
+            "personal_details": True,  # Languages, nationality important
+            "hobbies": True  # Personal interests common
+        },
         "rules": [
             "Phone should include country code (e.g., +91)",
             "Projects/internships prominent",
+            "Certifications highly valued",
+            "Personal details section standard",
         ],
     },
     "JP-R": {
         "label": "Japan — Rirekisho",
         "date_format": "YYYY/MM",
-        "section_order": ["profile", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
         "labels": {"experience": "職歴 (Shokureki)", "education": "学歴 (Gakureki)"},
+        "optional_fields": {
+            "photo": True,  # Standard requirement
+            "date_of_birth": True,  # Required
+            "certifications": True,
+            "references": False,  # Not standard
+            "personal_details": True,  # Personal info important
+            "hobbies": True  # 趣味 (Shumi) section standard
+        },
         "rules": [
             "Structured, chronological",
             "Kana name field recommended",
-            "Optional photo toggle (default OFF)",
+            "Photo required (default ON)",
+            "Date of birth standard",
+            "Personal details section expected",
         ],
     },
     "JP-S": {
         "label": "Japan — Shokumu Keirekisho",
         "date_format": "YYYY/MM",
-        "section_order": ["profile", "summary", "skills", "projects", "experience", "education"],
+        "section_order": ["profile", "summary", "skills", "projects", "experience", "education", "certifications"],
         "labels": {"experience": "職務経歴", "skills": "スキルマトリクス"},
+        "optional_fields": {
+            "photo": False,  # Less common in skills-focused resume
+            "date_of_birth": False,
+            "certifications": True,
+            "references": False,
+            "personal_details": False,
+            "hobbies": False
+        },
         "rules": [
             "Narrative achievements",
             "Skills matrix and project details",
+            "Focus on accomplishments over personal info",
+        ],
+    },
+    "SG": {
+        "label": "Singapore",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
+        "labels": {"experience": "Work Experience", "education": "Education"},
+        "optional_fields": {
+            "photo": True,  # Optional but common
+            "date_of_birth": True,  # Common practice
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Languages, nationality important
+            "hobbies": False
+        },
+        "rules": [
+            "Multilingual capabilities important",
+            "Work permit status relevant",
+            "Include relevant certifications",
+            "Regional experience valued",
+        ],
+    },
+    "AE": {
+        "label": "United Arab Emirates",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
+        "labels": {"experience": "Professional Experience", "education": "Educational Background"},
+        "optional_fields": {
+            "photo": True,  # Common practice
+            "date_of_birth": True,
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Nationality, visa status crucial
+            "hobbies": False
+        },
+        "rules": [
+            "Visa status and nationality important",
+            "Arabic/English language skills valued",
+            "Regional/international experience highlighted",
+            "Professional certifications important",
         ],
     },
 }
