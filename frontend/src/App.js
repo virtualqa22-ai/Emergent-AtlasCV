@@ -1133,17 +1133,37 @@ function Home() {
                             )}
                           </div>
                           
-                          <div className="flex gap-1">
-                            <Input
-                              placeholder="Add comment..."
-                              value={newComment}
-                              onChange={(e) => setNewComment(e.target.value)}
-                              className="text-xs"
-                            />
-                            <Button size="sm" onClick={addComment} disabled={!newComment.trim()}>
-                              Add
-                            </Button>
-                          </div>
+                            <div className="space-y-2">
+                              <Select value={commentSection} onValueChange={setCommentSection}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select section to comment on" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="summary">Summary</SelectItem>
+                                  <SelectItem value="skills">Skills</SelectItem>
+                                  <SelectItem value="experience">Experience</SelectItem>
+                                  <SelectItem value="education">Education</SelectItem>
+                                  <SelectItem value="projects">Projects</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-1">
+                                <Input
+                                  placeholder="Add comment..."
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  className="text-xs"
+                                  aria-label="Comment text"
+                                />
+                                <Button 
+                                  size="sm" 
+                                  onClick={addComment} 
+                                  disabled={!newComment.trim() || !commentSection}
+                                  aria-label="Add comment to selected section"
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                            </div>
                         </TabsContent>
                         
                         <TabsContent value="suggestions" className="space-y-2">
