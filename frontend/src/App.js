@@ -525,33 +525,156 @@ function Home() {
         </div>
       </header>
 
-      <main className="container-xl grid grid-cols-12 gap-6 py-6">
-        <div className="col-span-12 lg:col-span-7 space-y-6">
-          {leftOrder.map((key) => Sections[key]).filter(Boolean)}
+      <main className="container-xl py-6">
+        {/* Mobile Preview Mode Selector */}
+        <div className="lg:hidden mb-4">
+          <div className="flex items-center gap-1 border rounded p-1">
+            <Button
+              variant={previewMode === 'edit' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPreviewMode('edit')}
+              className="flex-1 text-xs"
+            >
+              <FileText className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              variant={previewMode === 'preview' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPreviewMode('preview')}
+              className="flex-1 text-xs"
+            >
+              <Search className="h-4 w-4" />
+              Preview
+            </Button>
+          </div>
         </div>
 
-        {/* Right column: ATS & Preset info */}
-        <div className="col-span-12 lg:col-span-5 space-y-6">
-          <Card className="section card-hover">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 h-heading"><BadgeCheck className="h-5 w-5 text-slate-700" /> Live ATS Heuristic</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-semibold">
-                Score: <span className={scoreColor}>{ats.score}</span>/100
-              </div>
-              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600">
-                {ats.hints.map((h, i) => (<li key={i}>{h}</li>))}
-                {ats.hints.length === 0 ? <li>Looks solid. Keep quantifying impact.</li> : null}
-              </ul>
-              {validation?.issues?.length > 0 && (
-                <div className="mt-4">
-                  <div className="font-medium h-heading">Locale Validation</div>
-                  <ul className="list-disc pl-5 text-sm text-slate-600 mt-1">
-                    {validation.issues.map((x, i) => (<li key={i}>{x}</li>))}
-                  </ul>
-                </div>
+        <div className={`grid gap-6 ${
+          previewMode === 'split' 
+            ? 'lg:grid-cols-12' 
+            : previewMode === 'edit'
+              ? 'grid-cols-1'
+              : 'grid-cols-1'
+        }`}>
+          
+          {/* Editor Column */}
+          {(previewMode === 'edit' || previewMode === 'split') && (
+            <div className={`space-y-6 ${
+              previewMode === 'split' ? 'lg:col-span-6' : 'col-span-1'
+            }`}>
+              {/* Template Selector */}
+              <Card className="section card-hover">
+                <CardContent className="p-4">
+                  <TemplateSelector 
+                    selectedTemplate={selectedTemplate}
+                    onTemplateChange={setSelectedTemplate}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Form Sections */}
+              {leftOrder.map((key) => Sections[key]).filter(Boolean)}
+
+              {/* ATS Score - Only show in edit-only mode or mobile */}
+              {(previewMode === 'edit' || previewMode === 'preview') && (
+                <Card className="section card-hover">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 h-heading">
+                      <BadgeCheck className="h-5 w-5 text-slate-700" /> Live ATS Heuristic
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-semibold">
+                      Score: <span className={scoreColor}>{ats.score}</span>/100
+                    </div>
+                    <ul className="mt-3 list-disc pl-5 text-sm text-slate-600">
+                      {ats.hints.map((h, i) => (<li key={i}>{h}</li>))}
+                      {ats.hints.length === 0 ? <li>Looks solid. Keep quantifying impact.</li> : null}
+                    </ul>
+                    {validation?.issues?.length > 0 && (
+                      <div className="mt-4">
+                        <div className="font-medium h-heading">Locale Validation</div>
+                        <ul className="list-disc pl-5 text-sm text-slate-600 mt-1">
+                          {validation.issues.map((x, i) => (<li key={i}>{x}</li>))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
+            </div>
+          )}
+
+          {/* Preview Column */}
+          {(previewMode === 'preview' || previewMode === 'split') && (
+            <div className={`${
+              previewMode === 'split' ? 'lg:col-span-6' : 'col-span-1'
+            }`}>
+              <div className="space-y-6">
+                {/* Live Resume Preview */}
+                <Card className="section card-hover">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between h-heading">
+                      <span className="flex items-center gap-2">
+                        <LayoutTemplate className="h-5 w-5 text-slate-700" />
+                        Live Preview
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.print()}
+                          className="text-xs"
+                        >
+                          <UploadCloud className="h-4 w-4" />
+                          Print
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="bg-gray-50 overflow-auto max-h-[800px]">
+                      <ResumePreview 
+                        resumeData={debouncedForm}
+                        template={selectedTemplate}
+                        className="transition-all duration-200"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* ATS Score in Split Mode */}
+                {previewMode === 'split' && (
+                  <Card className="section card-hover">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 h-heading">
+                        <BadgeCheck className="h-5 w-5 text-slate-700" /> Live ATS Heuristic
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-semibold">
+                        Score: <span className={scoreColor}>{ats.score}</span>/100
+                      </div>
+                      <ul className="mt-3 list-disc pl-5 text-sm text-slate-600">
+                        {ats.hints.map((h, i) => (<li key={i}>{h}</li>))}
+                        {ats.hints.length === 0 ? <li>Looks solid. Keep quantifying impact.</li> : null}
+                      </ul>
+                      {validation?.issues?.length > 0 && (
+                        <div className="mt-4">
+                          <div className="font-medium h-heading">Locale Validation</div>
+                          <ul className="list-disc pl-5 text-sm text-slate-600 mt-1">
+                            {validation.issues.map((x, i) => (<li key={i}>{x}</li>))}
+                          </ul>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
               <div className="mt-4 text-xs label-sub">Heuristic score + preset validation. AI tips coming next.</div>
             </CardContent>
           </Card>
