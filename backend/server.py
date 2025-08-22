@@ -477,7 +477,11 @@ async def create_resume(payload: ResumeCreate):
     ats = compute_heuristic_score(data)
     doc = data.dict()
     doc["ats"] = ats
-    await db.resumes.insert_one(doc)
+    
+    # Encrypt sensitive fields before storing
+    encrypted_doc = privacy_encryption.encrypt_sensitive_data(doc)
+    await db.resumes.insert_one(encrypted_doc)
+    
     return Resume(**data.dict())
 
 @api_router.put("/resumes/{resume_id}", response_model=Resume)
@@ -485,12 +489,20 @@ async def update_resume(resume_id: str, payload: ResumeCreate):
     existing = await db.resumes.find_one({"id": resume_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Resume not found")
-    merged = {**existing, **payload.dict(exclude_none=True)}
+    
+    # Decrypt existing data for merging
+    decrypted_existing = privacy_encryption.decrypt_sensitive_data(existing)
+    
+    merged = {**decrypted_existing, **payload.dict(exclude_none=True)}
     merged["updated_at"] = datetime.now(timezone.utc).isoformat()
     data = Resume(**{k: v for k, v in merged.items() if k in Resume.model_fields})
     ats = compute_heuristic_score(data)
     merged["ats"] = ats
-    await db.resumes.update_one({"id": resume_id}, {"$set": merged})
+    
+    # Encrypt before storing
+    encrypted_merged = privacy_encryption.encrypt_sensitive_data(merged)
+    await db.resumes.update_one({"id": resume_id}, {"$set": encrypted_merged})
+    
     return data
 
 @api_router.get("/resumes/{resume_id}", response_model=Resume)
@@ -498,7 +510,10 @@ async def get_resume(resume_id: str):
     found = await db.resumes.find_one({"id": resume_id})
     if not found:
         raise HTTPException(status_code=404, detail="Resume not found")
-    return Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    # Decrypt sensitive data before returning
+    decrypted_data = privacy_encryption.decrypt_sensitive_data(found)
+    return Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
 
 @api_router.post("/resumes/{resume_id}/score")
 async def score_resume(resume_id: str):
