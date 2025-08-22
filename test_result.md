@@ -207,11 +207,11 @@ frontend:
 
   - task: "Add GDPR cookie consent banner"
     implemented: true
-    working: false
+    working: "NA"
     file: "App.js, components/privacy/CookieConsentBanner.js"
     stuck_count: 1
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -222,6 +222,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE: Cookie consent banner appears and basic functionality works (Accept All button, localStorage storage), BUT there's a severe React infinite loop error causing 'Analytics enabled' to log repeatedly and 'Maximum update depth exceeded' error. This breaks the entire application with red error screen. The onConsentChange callback is triggering infinite re-renders when analytics consent is enabled."
+      - working: "NA"
+        agent: "main"
+        comment: "🔧 FIXED: Resolved React infinite loop issue by stabilizing handleConsentChange callback and removing onConsentChange from CookieConsentBanner useEffect dependencies. Used functional setState to prevent comparison issues."
 
   - task: "Create privacy settings and data management UI"
     implemented: true
