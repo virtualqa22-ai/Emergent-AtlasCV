@@ -85,6 +85,159 @@ function Home() {
 
   const keyFor = (i, bi) => `${i}-${bi}`;
 
+  // Accessibility: Handle keyboard navigation  
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Tab') {
+      setFocusVisible(true);
+    }
+    // Skip link functionality
+    if (e.key === 'Enter' && e.target === skipLinkRef.current) {
+      e.preventDefault();
+      mainContentRef.current?.focus();
+    }
+  }, []);
+
+  const handleMouseDown = useCallback(() => {
+    setFocusVisible(false);
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [handleKeyDown, handleMouseDown]);
+
+  // Phase 6: Template functions
+  const loadTemplates = async () => {
+    try {
+      const { data } = await axios.get(`${API}/templates`);
+      setTemplates(data.templates || []);
+    } catch (e) { 
+      console.error("Failed to load templates:", e); 
+    }
+  };
+
+  const applyTemplate = async (templateId) => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    setApplyingTemplate(true);
+    try {
+      const { data } = await axios.post(`${API}/templates/${templateId}/apply/${resumeId}`);
+      setForm(data);
+      setSelectedTemplate(templateId);
+      setShowTemplateDialog(false);
+      alert("Template applied successfully!");
+    } catch (e) {
+      console.error("Failed to apply template:", e);
+      alert("Failed to apply template. Please try again.");
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
+  // Phase 6: Collaboration functions
+  const createShareLink = async () => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    try {
+      const { data } = await axios.post(`${API}/share`, {
+        resume_id: resumeId,
+        permissions: sharePermissions,
+        expires_in_days: 30
+      });
+      setShareLink(data);
+      navigator.clipboard.writeText(`${window.location.origin}/share/${data.share_token}`);
+      alert("Share link created and copied to clipboard!");
+    } catch (e) {
+      console.error("Failed to create share link:", e);
+      alert("Failed to create share link. Please try again.");
+    }
+  };
+
+  const loadCollaborationData = async () => {
+    if (!resumeId) return;
+    
+    try {
+      const [commentsRes, suggestionsRes] = await Promise.all([
+        axios.get(`${API}/comments/${resumeId}`),
+        axios.get(`${API}/suggestions/${resumeId}`)
+      ]);
+      setComments(commentsRes.data.comments || []);
+      setSuggestions(suggestionsRes.data.suggestions || []);
+    } catch (e) {
+      console.error("Failed to load collaboration data:", e);
+    }
+  };
+
+  const addComment = async () => {
+    if (!newComment.trim() || !commentSection) return;
+    
+    try {
+      const { data } = await axios.post(`${API}/comments`, {
+        resume_id: resumeId,
+        section: commentSection,
+        content: newComment,
+        author_name: "You"
+      });
+      setComments(prev => [...prev, data]);
+      setNewComment("");
+      setCommentSection("");
+    } catch (e) {
+      console.error("Failed to add comment:", e);
+      alert("Failed to add comment. Please try again.");
+    }
+  };
+
+  const acceptSuggestion = async (suggestionId) => {
+    try {
+      await axios.post(`${API}/suggestions/${suggestionId}/accept`);
+      setSuggestions(prev => 
+        prev.map(s => s.id === suggestionId ? { ...s, status: 'accepted' } : s)
+      );
+      // Reload resume data
+      if (resumeId) {
+        const { data } = await axios.get(`${API}/resumes/${resumeId}`);
+        setForm(data);
+      }
+    } catch (e) {
+      console.error("Failed to accept suggestion:", e);
+      alert("Failed to accept suggestion. Please try again.");
+    }
+  };
+
+  const rejectSuggestion = async (suggestionId) => {
+    try {
+      await axios.post(`${API}/suggestions/${suggestionId}/reject`);
+      setSuggestions(prev => 
+        prev.map(s => s.id === suggestionId ? { ...s, status: 'rejected' } : s)
+      );
+    } catch (e) {
+      console.error("Failed to reject suggestion:", e);
+      alert("Failed to reject suggestion. Please try again.");
+    }
+  };
+
+  // Template category icons
+  const getTemplateIcon = (category) => {
+    switch (category) {
+      case 'professional': return <Crown className="h-4 w-4" />;
+      case 'modern': return <Zap className="h-4 w-4" />;
+      case 'executive': return <Crown className="h-4 w-4" />;
+      case 'technical': return <Code className="h-4 w-4" />;
+      case 'creative': return <Brush className="h-4 w-4" />;
+      default: return <LayoutTemplate className="h-4 w-4" />;
+    }
+  };
+
   const resumePlainText = () => {
     try {
       const expText = (form.experience || []).map(e => [e.company, e.title, e.city, (e.bullets||[]).join(" ")].join(" ")).join(" ");
