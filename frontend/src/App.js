@@ -687,11 +687,49 @@ function Home() {
 
           <Card className="section card-hover">
             <CardHeader>
-              <CardTitle className="h-heading">Import/Export (coming soon)</CardTitle>
+              <CardTitle className="h-heading">Import/Export</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
-              <Button variant="outline"><UploadCloud className="h-4 w-4" />Import</Button>
-              <Button variant="outline"><FileText className="h-4 w-4" />Export</Button>
+            <CardContent>
+              <div className="space-y-3">
+                {/* Import Section */}
+                <div>
+                  <Label>Import Resume (PDF)</Label>
+                  <div className="mt-2">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileImport}
+                      disabled={importing}
+                      className="hidden"
+                      id="file-import"
+                    />
+                    <label
+                      htmlFor="file-import"
+                      className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer ${importing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      {importing ? "Importing..." : "Import PDF"}
+                    </label>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Max 5MB, PDF format only</p>
+                </div>
+
+                {/* Export Section */}
+                <div>
+                  <Label>Export Resume</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <Button variant="outline" onClick={exportPDF} disabled={!resumeId}>
+                      <FileText className="h-4 w-4" />PDF
+                    </Button>
+                    <Button variant="outline" onClick={exportJSON} disabled={!resumeId}>
+                      <FileText className="h-4 w-4" />JSON
+                    </Button>
+                  </div>
+                  {!resumeId && (
+                    <p className="text-xs text-slate-500 mt-1">Save resume first to export</p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
