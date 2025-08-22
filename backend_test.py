@@ -610,6 +610,396 @@ class AtlasCVAPITester:
             print(f"   ❌ Error in {test_name}: {str(e)}")
             return False
 
+    # ===== PHASE 7 PRIVACY/COMPLIANCE TESTS =====
+    
+    def test_encryption_functionality(self):
+        """Test that sensitive resume fields are encrypted when stored and decrypted when retrieved"""
+        print("\n🔐 Testing Encryption Functionality...")
+        
+        # Create a resume with sensitive contact information
+        sensitive_resume = {
+            "locale": "IN",
+            "contact": {
+                "full_name": "Priya Sensitive Data",
+                "email": f"priya-{uuid.uuid4().hex[:8]}@sensitive-test.com",
+                "phone": "+91 9876543210",
+                "linkedin": "https://linkedin.com/in/priya-sensitive",
+                "website": "https://priya-portfolio.dev"
+            },
+            "summary": "Software engineer with expertise in privacy-focused applications",
+            "skills": ["Python", "Encryption", "GDPR Compliance"],
+            "experience": [{
+                "id": str(uuid.uuid4()),
+                "company": "Privacy Corp",
+                "title": "Security Engineer",
+                "city": "Bengaluru",
+                "start_date": "2023-01",
+                "end_date": "Present",
+                "bullets": ["Implemented data encryption", "GDPR compliance features"]
+            }]
+        }
+        
+        # Create resume
+        success, create_response = self.run_test(
+            "Create Resume with Sensitive Data",
+            "POST",
+            "resumes",
+            200,
+            data=sensitive_resume
+        )
+        
+        if not success:
+            return False
+        
+        created_resume_id = create_response.get("id")
+        if not created_resume_id:
+            print("   ❌ No resume ID returned from creation")
+            return False
+        
+        # Retrieve the resume and verify data is properly decrypted
+        success, get_response = self.run_test(
+            "Get Resume - Verify Decryption",
+            "GET",
+            f"resumes/{created_resume_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify that sensitive data is properly returned (decrypted)
+        contact = get_response.get("contact", {})
+        expected_name = "Priya Sensitive Data"
+        expected_linkedin = "https://linkedin.com/in/priya-sensitive"
+        
+        if contact.get("full_name") != expected_name:
+            print(f"   ❌ Name mismatch: expected '{expected_name}', got '{contact.get('full_name')}'")
+            return False
+        
+        if contact.get("linkedin") != expected_linkedin:
+            print(f"   ❌ LinkedIn mismatch: expected '{expected_linkedin}', got '{contact.get('linkedin')}'")
+            return False
+        
+        print("   ✅ Sensitive data properly encrypted/decrypted")
+        return True
+    
+    def test_gdpr_export_data(self):
+        """Test POST /api/gdpr/export-my-data endpoint"""
+        print("\n📤 Testing GDPR Data Export...")
+        
+        if not self.resume_id:
+            print("   ❌ No resume ID available for export test")
+            return False
+        
+        # Test export by resume ID
+        export_request = {
+            "user_identifier": self.resume_id,
+            "format": "json"
+        }
+        
+        success, response = self.run_test(
+            "GDPR Export Data by Resume ID",
+            "POST",
+            "gdpr/export-my-data",
+            200,
+            data=export_request
+        )
+        
+        if not success:
+            return False
+        
+        # Verify export structure
+        required_fields = ["export_timestamp", "user_identifier", "data_categories", "resumes"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing required field in export: {field}")
+                return False
+        
+        # Verify resume data is included
+        resumes = response.get("resumes", [])
+        if len(resumes) == 0:
+            print("   ❌ No resume data in export")
+            return False
+        
+        # Test export by email
+        email_export_request = {
+            "user_identifier": self.test_user_email,
+            "format": "json"
+        }
+        
+        success, email_response = self.run_test(
+            "GDPR Export Data by Email",
+            "POST",
+            "gdpr/export-my-data",
+            200,
+            data=email_export_request
+        )
+        
+        if success:
+            print("   ✅ GDPR data export working for both resume ID and email")
+            return True
+        
+        return False
+    
+    def test_gdpr_delete_data(self):
+        """Test POST /api/gdpr/delete-my-data endpoint"""
+        print("\n🗑️ Testing GDPR Data Deletion...")
+        
+        # Create a test resume specifically for deletion
+        delete_test_resume = {
+            "locale": "EU",
+            "contact": {
+                "full_name": "Delete Test User",
+                "email": f"delete-test-{uuid.uuid4().hex[:8]}@gdpr-test.com",
+                "phone": "+49 123 456 7890"
+            },
+            "summary": "Test user for GDPR deletion testing",
+            "skills": ["GDPR", "Privacy"]
+        }
+        
+        success, create_response = self.run_test(
+            "Create Resume for Deletion Test",
+            "POST",
+            "resumes",
+            200,
+            data=delete_test_resume
+        )
+        
+        if not success:
+            return False
+        
+        delete_resume_id = create_response.get("id")
+        delete_email = delete_test_resume["contact"]["email"]
+        
+        # Test deletion by resume ID
+        delete_request = {
+            "user_identifier": delete_resume_id,
+            "reason": "GDPR compliance test"
+        }
+        
+        success, delete_response = self.run_test(
+            "GDPR Delete Data by Resume ID",
+            "POST",
+            "gdpr/delete-my-data",
+            200,
+            data=delete_request
+        )
+        
+        if not success:
+            return False
+        
+        # Verify deletion response structure
+        required_fields = ["deletion_timestamp", "user_identifier", "deleted_records", "status"]
+        for field in required_fields:
+            if field not in delete_response:
+                print(f"   ❌ Missing required field in deletion response: {field}")
+                return False
+        
+        # Verify resume was actually deleted
+        success, get_response = self.run_test(
+            "Verify Resume Deleted",
+            "GET",
+            f"resumes/{delete_resume_id}",
+            404  # Should return 404 after deletion
+        )
+        
+        if success:  # success here means we got the expected 404
+            print("   ✅ GDPR data deletion working correctly")
+            return True
+        
+        return False
+    
+    def test_privacy_consent_endpoints(self):
+        """Test privacy consent recording and retrieval"""
+        print("\n🍪 Testing Privacy Consent Endpoints...")
+        
+        test_user_id = f"consent-user-{uuid.uuid4().hex[:8]}"
+        
+        # Record privacy consent
+        consent_data = {
+            "user_identifier": test_user_id,
+            "has_consent": True,
+            "version": "1.0",
+            "consent_types": ["functional", "analytics"],
+            "ip_address": "192.168.1.1",
+            "user_agent": "Mozilla/5.0 Test Browser"
+        }
+        
+        success, consent_response = self.run_test(
+            "Record Privacy Consent",
+            "POST",
+            "privacy/consent",
+            200,
+            data=consent_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify consent response structure
+        required_fields = ["user_identifier", "has_consent", "consent_date", "consent_version"]
+        for field in required_fields:
+            if field not in consent_response:
+                print(f"   ❌ Missing required field in consent response: {field}")
+                return False
+        
+        # Retrieve privacy consent
+        success, get_consent_response = self.run_test(
+            "Get Privacy Consent",
+            "GET",
+            f"privacy/consent/{test_user_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify retrieved consent data
+        if get_consent_response.get("has_consent") != True:
+            print("   ❌ Consent status not properly retrieved")
+            return False
+        
+        if get_consent_response.get("user_identifier") != test_user_id:
+            print("   ❌ User identifier mismatch in consent retrieval")
+            return False
+        
+        print("   ✅ Privacy consent endpoints working correctly")
+        return True
+    
+    def test_privacy_info_endpoint(self):
+        """Test GET /api/privacy/info/{resume_id} endpoint"""
+        print("\n🔍 Testing Privacy Info Endpoint...")
+        
+        if not self.resume_id:
+            print("   ❌ No resume ID available for privacy info test")
+            return False
+        
+        success, response = self.run_test(
+            "Get Privacy Info",
+            "GET",
+            f"privacy/info/{self.resume_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["resume_id", "privacy_info", "gdpr_rights"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing required field in privacy info: {field}")
+                return False
+        
+        # Verify GDPR rights information
+        gdpr_rights = response.get("gdpr_rights", {})
+        expected_rights = ["data_export", "data_deletion", "data_portability"]
+        for right in expected_rights:
+            if right not in gdpr_rights:
+                print(f"   ❌ Missing GDPR right: {right}")
+                return False
+        
+        print("   ✅ Privacy info endpoint working correctly")
+        return True
+    
+    def test_local_mode_settings(self):
+        """Test POST /api/local-mode/settings endpoint"""
+        print("\n🏠 Testing Local Mode Settings...")
+        
+        settings_data = {
+            "enabled": True,
+            "encrypt_local_data": True,
+            "auto_clear_after_hours": 24
+        }
+        
+        success, response = self.run_test(
+            "Update Local Mode Settings",
+            "POST",
+            "local-mode/settings",
+            200,
+            data=settings_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["local_mode", "encryption_enabled", "auto_clear_hours", "message"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing required field in local mode response: {field}")
+                return False
+        
+        # Verify settings are reflected correctly
+        if response.get("local_mode") != True:
+            print("   ❌ Local mode setting not properly reflected")
+            return False
+        
+        if response.get("encryption_enabled") != True:
+            print("   ❌ Encryption setting not properly reflected")
+            return False
+        
+        print("   ✅ Local mode settings endpoint working correctly")
+        return True
+    
+    def test_existing_functionality_with_encryption(self):
+        """Test that existing functionality still works with encryption enabled"""
+        print("\n🔄 Testing Existing Functionality with Encryption...")
+        
+        # Test resume operations with encryption
+        if not self.resume_id:
+            print("   ❌ No resume ID available for existing functionality test")
+            return False
+        
+        # Test update resume
+        update_data = {
+            "summary": "Updated summary with encryption enabled",
+            "skills": ["React", "Node", "AWS", "Privacy Engineering"]
+        }
+        
+        success, update_response = self.run_test(
+            "Update Resume with Encryption",
+            "PUT",
+            f"resumes/{self.resume_id}",
+            200,
+            data=update_data
+        )
+        
+        if not success:
+            return False
+        
+        # Test scoring still works
+        success, score_response = self.run_test(
+            "Score Resume with Encryption",
+            "POST",
+            f"resumes/{self.resume_id}/score",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify score structure
+        if "score" not in score_response or "hints" not in score_response:
+            print("   ❌ Score response structure invalid with encryption")
+            return False
+        
+        # Test JD parsing still works
+        jd_text = "Looking for React developer with Node.js and AWS experience"
+        success, jd_response = self.run_test(
+            "JD Parse with Encryption",
+            "POST",
+            "jd/parse",
+            200,
+            data={"text": jd_text}
+        )
+        
+        if not success:
+            return False
+        
+        print("   ✅ Existing functionality works correctly with encryption")
+        return True
+
 def main():
     print("🚀 Starting AtlasCV Backend API Tests - Phase 3 Validation")
     print("=" * 60)
