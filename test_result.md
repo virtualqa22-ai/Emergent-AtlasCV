@@ -267,14 +267,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Re-test cookie consent banner after infinite loop fix"
-    - "Verify Settings button accessibility"
-    - "Re-test local-only mode functionality" 
-    - "Re-test privacy settings UI"
+    - "Phase 7 privacy features testing complete"
   stuck_tasks:
     []
   test_all: false
-  test_priority: "stuck_first"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
