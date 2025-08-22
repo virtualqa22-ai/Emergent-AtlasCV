@@ -918,7 +918,7 @@ async def create_share_link(request: CreateShareLinkRequest):
     expires_at = None
     if request.expires_in_days:
         expires_at = (datetime.now(timezone.utc) + 
-                     datetime.timedelta(days=request.expires_in_days)).isoformat()
+                     timedelta(days=request.expires_in_days)).isoformat()
     
     # Create share link
     share_link = ShareableLink(
