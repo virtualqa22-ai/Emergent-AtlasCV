@@ -113,24 +113,61 @@ function Home() {
   const saveResume = async () => {
     setSaving(true);
     try {
-      let idToScore = resumeId;
-      if (!resumeId) {
-        const { data } = await axios.post(`${API}/resumes`, form);
-        idToScore = data.id;
-        remember(idToScore);
+      if (isLocalMode) {
+        // Save locally with encryption
+        const savedData = saveLocalResume(form);
+        if (savedData) {
+          // Calculate local heuristic score
+          const localScore = calculateLocalScore(form);
+          setAts(localScore);
+        }
       } else {
-        await axios.put(`${API}/resumes/${resumeId}`, form);
-        idToScore = resumeId;
-      }
-      if (idToScore) {
-        const { data: score } = await axios.post(`${API}/resumes/${idToScore}/score`);
-        setAts(score);
+        // Save to server
+        let idToScore = resumeId;
+        if (!resumeId) {
+          const { data } = await axios.post(`${API}/resumes`, form);
+          idToScore = data.id;
+          remember(idToScore);
+        } else {
+          await axios.put(`${API}/resumes/${resumeId}`, form);
+          idToScore = resumeId;
+        }
+        if (idToScore) {
+          const { data: score } = await axios.post(`${API}/resumes/${idToScore}/score`);
+          setAts(score);
+        }
       }
     } catch (e) {
       console.error(e);
     } finally {
       setSaving(false);
     }
+  };
+
+  // Local scoring function for privacy mode
+  const calculateLocalScore = (resumeData) => {
+    let score = 100;
+    const hints = [];
+    
+    // Basic validation
+    if (!resumeData.contact?.full_name?.trim()) {
+      hints.push("Add your full name in Contact.");
+      score -= 20;
+    }
+    if (!resumeData.contact?.email?.trim()) {
+      hints.push("Add an email address.");
+      score -= 20;
+    }
+    if (!resumeData.experience?.length) {
+      hints.push("Add at least one experience entry.");
+      score -= 25;
+    }
+    if (!resumeData.skills?.length || resumeData.skills.length < 5) {
+      hints.push("Add more relevant skills (aim for 8–12).");
+      score -= 10;
+    }
+    
+    return { score: Math.max(0, score), hints };
   };
 
   const validateLocale = async () => {
