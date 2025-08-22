@@ -695,16 +695,24 @@ function Home() {
             <div className="flex gap-2">
               <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline">Browse All Templates</Button>
+                  <Button 
+                    variant="outline"
+                    aria-describedby="template-help"
+                  >
+                    Browse All Templates
+                  </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh]">
+                <div id="template-help" className="sr-only">
+                  Open template gallery to choose from 5 professional, ATS-optimized resume templates
+                </div>
+                <DialogContent className="max-w-4xl max-h-[80vh]" role="dialog" aria-labelledby="template-dialog-title">
                   <DialogHeader>
-                    <DialogTitle>Choose Template</DialogTitle>
+                    <DialogTitle id="template-dialog-title">Choose Template</DialogTitle>
                     <DialogDescription>
-                      Select a professional, ATS-optimized template for your resume
+                      Select a professional, ATS-optimized template for your resume. Templates improve readability and pass through applicant tracking systems.
                     </DialogDescription>
                   </DialogHeader>
-                  <ScrollArea className="h-96">
+                  <ScrollArea className="h-96" aria-label="Template options">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                       {templates.map((template) => (
                         <div
@@ -715,14 +723,22 @@ function Home() {
                           onClick={() => setSelectedTemplate(template.id)}
                           role="button"
                           tabIndex={0}
-                          aria-label={`Select ${template.name} template`}
-                          onKeyDown={(e) => e.key === 'Enter' && setSelectedTemplate(template.id)}
+                          aria-pressed={selectedTemplate === template.id}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedTemplate(template.id);
+                            }
+                          }}
                         >
                           <div className="flex items-center gap-2 mb-3">
                             {getTemplateIcon(template.category)}
                             <span className="font-semibold">{template.name}</span>
                             {template.ats_optimized && (
-                              <Badge variant="secondary">ATS Safe</Badge>
+                              <Badge variant="secondary">
+                                <BadgeCheck className="h-3 w-3 mr-1" aria-hidden="true" />
+                                ATS Safe
+                              </Badge>
                             )}
                           </div>
                           <p className="text-sm text-slate-600 mb-3">{template.description}</p>
@@ -747,9 +763,13 @@ function Home() {
                     <Button 
                       onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
                       disabled={!selectedTemplate || applyingTemplate}
+                      aria-describedby="apply-template-help"
                     >
                       {applyingTemplate ? "Applying..." : "Apply Template"}
                     </Button>
+                    <div id="apply-template-help" className="sr-only">
+                      Apply the selected template styling to your resume
+                    </div>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
