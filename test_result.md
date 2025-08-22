@@ -339,7 +339,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 7 privacy features testing complete"
+    - "Test live preview functionality with debounced updates"
+    - "Verify template switching works instantly"
+    - "Test responsive layout on different screen sizes"
+    - "Verify print functionality"
   stuck_tasks:
     []
   test_all: false
