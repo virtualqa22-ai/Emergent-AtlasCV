@@ -520,7 +520,10 @@ async def score_resume(resume_id: str):
     found = await db.resumes.find_one({"id": resume_id})
     if not found:
         raise HTTPException(status_code=404, detail="Resume not found")
-    data = Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    # Decrypt sensitive data for scoring
+    decrypted_data = privacy_encryption.decrypt_sensitive_data(found)
+    data = Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
     return compute_heuristic_score(data)
 
 # Include the router in the main app
