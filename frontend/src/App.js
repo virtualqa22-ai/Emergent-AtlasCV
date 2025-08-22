@@ -123,6 +123,112 @@ function Home() {
     handleChange("skills", [...(form.skills||[]), s]);
   };
 
+  const handleFileImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert("Only PDF files are supported");
+      return;
+    }
+
+    setImporting(true);
+    setImportResult(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const { data } = await axios.post(`${API}/import/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setImportResult(data);
+      if (data.success && data.extracted_data) {
+        setShowImportModal(true);
+      }
+    } catch (e) {
+      console.error(e);
+      setImportResult({
+        success: false,
+        message: e.response?.data?.detail || "Import failed",
+        warnings: ["Please check your file format and try again"]
+      });
+      setShowImportModal(true);
+    } finally {
+      setImporting(false);
+      // Clear file input
+      event.target.value = '';
+    }
+  };
+
+  const applyImportedData = () => {
+    if (importResult?.extracted_data) {
+      setForm(importResult.extracted_data);
+      setShowImportModal(false);
+      setImportResult(null);
+      // Auto-save the imported resume
+      setTimeout(() => saveResume(), 500);
+    }
+  };
+
+  const exportPDF = async () => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API}/export/pdf/${resumeId}`);
+      if (!response.ok) throw new Error("Export failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resume_${form.contact.full_name || 'AtlasCV'}_${form.locale}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error(e);
+      alert("PDF export failed. Please try again.");
+    }
+  };
+
+  const exportJSON = async () => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API}/export/json/${resumeId}`);
+      if (!response.ok) throw new Error("Export failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resume_${form.contact.full_name || 'AtlasCV'}_${form.locale}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error(e);
+      alert("JSON export failed. Please try again.");
+    }
+  };
+
 
   const handleChange = (path, value) => {
     setForm((prev) => {
