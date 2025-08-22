@@ -170,6 +170,17 @@ function Home() {
     return { score: Math.max(0, score), hints };
   };
 
+  const handleConsentChange = useCallback((consentData) => {
+    // Only update if consent actually changed
+    if (!cookieConsent || JSON.stringify(cookieConsent) !== JSON.stringify(consentData)) {
+      setCookieConsent(consentData);
+      // Handle analytics/marketing consent here only on actual change
+      if (consentData.preferences?.analytics && !cookieConsent?.preferences?.analytics) {
+        console.log("Analytics enabled");
+      }
+    }
+  }, [cookieConsent]);
+
   const validateLocale = async () => {
     try {
       const { data } = await axios.post(`${API}/validate`, { resume: form });
