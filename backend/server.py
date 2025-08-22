@@ -13,8 +13,8 @@ from datetime import datetime, timezone
 import re
 
 # Import our privacy utilities
-from .encryption_utils import privacy_encryption
-from .gdpr_utils import GDPRCompliance
+from encryption_utils import privacy_encryption
+from gdpr_utils import GDPRCompliance
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
