@@ -430,39 +430,57 @@ startxref
         )
         
         if success:
-            # Check content type
-            content_type = response.headers.get('content-type', '')
-            if 'application/json' in content_type:
-                print("   ✅ Correct content type: application/json")
-            else:
-                print(f"   ⚠️  Content type: {content_type}")
-            
-            # Check content disposition header
-            content_disposition = response.headers.get('content-disposition', '')
-            if 'attachment' in content_disposition and 'filename' in content_disposition:
-                print(f"   ✅ Correct content disposition: {content_disposition}")
-            else:
-                print(f"   ⚠️  Content disposition: {content_disposition}")
-            
-            # Try to parse JSON content
-            try:
-                json_data = response.json()
-                
-                # Check for required resume fields
-                required_fields = ['id', 'locale', 'contact', 'created_at']
-                missing_fields = [field for field in required_fields if field not in json_data]
-                
-                if not missing_fields:
-                    print("   ✅ JSON contains all required resume fields")
-                    print(f"   📊 JSON size: {len(response.content)} bytes")
-                    return True
+            # Check if response is a requests.Response object or dict
+            if hasattr(response, 'headers'):
+                # Check content type
+                content_type = response.headers.get('content-type', '')
+                if 'application/json' in content_type:
+                    print("   ✅ Correct content type: application/json")
                 else:
-                    print(f"   ❌ JSON missing fields: {missing_fields}")
-                    return False
+                    print(f"   ⚠️  Content type: {content_type}")
+                
+                # Check content disposition header
+                content_disposition = response.headers.get('content-disposition', '')
+                if 'attachment' in content_disposition and 'filename' in content_disposition:
+                    print(f"   ✅ Correct content disposition: {content_disposition}")
+                else:
+                    print(f"   ⚠️  Content disposition: {content_disposition}")
+                
+                # Try to parse JSON content
+                try:
+                    json_data = response.json()
                     
-            except json.JSONDecodeError:
-                print("   ❌ Response is not valid JSON")
-                return False
+                    # Check for required resume fields
+                    required_fields = ['id', 'locale', 'contact', 'created_at']
+                    missing_fields = [field for field in required_fields if field not in json_data]
+                    
+                    if not missing_fields:
+                        print("   ✅ JSON contains all required resume fields")
+                        print(f"   📊 JSON size: {len(response.content)} bytes")
+                        return True
+                    else:
+                        print(f"   ❌ JSON missing fields: {missing_fields}")
+                        return False
+                        
+                except json.JSONDecodeError:
+                    print("   ❌ Response is not valid JSON")
+                    return False
+            else:
+                # Response is already parsed JSON
+                if isinstance(response, dict):
+                    # Check for required resume fields
+                    required_fields = ['id', 'locale', 'contact', 'created_at']
+                    missing_fields = [field for field in required_fields if field not in response]
+                    
+                    if not missing_fields:
+                        print("   ✅ JSON contains all required resume fields")
+                        return True
+                    else:
+                        print(f"   ❌ JSON missing fields: {missing_fields}")
+                        return False
+                else:
+                    print("   ❌ Unexpected response format")
+                    return False
         
         return False
 
