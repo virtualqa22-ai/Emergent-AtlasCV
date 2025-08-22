@@ -436,6 +436,9 @@ function Home() {
         const map = {};
         (pre.data.presets || []).forEach((p) => { map[p.code] = p; });
         setPresets(map);
+        
+        // Load templates for Phase 6
+        await loadTemplates();
       } catch(e) { console.error(e); }
     };
     boot();
