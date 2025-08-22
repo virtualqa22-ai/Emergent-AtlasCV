@@ -1271,14 +1271,414 @@ function Home() {
   );
 }
 
+// SharedResume component for viewing shared resumes
+function SharedResume() {
+  const { token } = useParams();
+  const [sharedData, setSharedData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentSection, setCommentSection] = useState("");
+  const [newSuggestion, setNewSuggestion] = useState({
+    section: "",
+    field: "",
+    original_value: "",
+    suggested_value: "",
+    reason: ""
+  });
+
+  useEffect(() => {
+    loadSharedResume();
+  }, [token]);
+
+  const loadSharedResume = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(`${API}/share/${token}`);
+      setSharedData(data);
+      
+      // Load comments and suggestions if user has permissions
+      if (data.share_info.can_comment) {
+        const [commentsRes, suggestionsRes] = await Promise.all([
+          axios.get(`${API}/comments/${data.resume.id}`),
+          axios.get(`${API}/suggestions/${data.resume.id}`)
+        ]);
+        setComments(commentsRes.data.comments || []);
+        setSuggestions(suggestionsRes.data.suggestions || []);
+      }
+    } catch (e) {
+      console.error("Failed to load shared resume:", e);
+      setError(e.response?.status === 404 ? "Shared resume not found or expired" : "Failed to load shared resume");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addComment = async () => {
+    if (!newComment.trim() || !commentSection) return;
+    
+    try {
+      const { data } = await axios.post(`${API}/comments`, {
+        resume_id: sharedData.resume.id,
+        section: commentSection,
+        content: newComment,
+        author_name: prompt("Enter your name:") || "Anonymous"
+      });
+      setComments(prev => [...prev, data]);
+      setNewComment("");
+      setCommentSection("");
+    } catch (e) {
+      console.error("Failed to add comment:", e);
+      alert("Failed to add comment. Please try again.");
+    }
+  };
+
+  const addSuggestion = async () => {
+    if (!newSuggestion.section || !newSuggestion.suggested_value || !newSuggestion.reason) return;
+    
+    try {
+      const { data } = await axios.post(`${API}/suggestions`, {
+        resume_id: sharedData.resume.id,
+        section: newSuggestion.section,
+        field: newSuggestion.field,
+        original_value: newSuggestion.original_value,
+        suggested_value: newSuggestion.suggested_value,
+        reason: newSuggestion.reason,
+        author_name: prompt("Enter your name:") || "Anonymous"
+      });
+      setSuggestions(prev => [...prev, data]);
+      setNewSuggestion({
+        section: "",
+        field: "",
+        original_value: "",
+        suggested_value: "",
+        reason: ""
+      });
+    } catch (e) {
+      console.error("Failed to add suggestion:", e);
+      alert("Failed to add suggestion. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading shared resume...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{error}</p>
+            <Button className="mt-4" onClick={() => window.location.href = "/"}>
+              Go to AtlasCV Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const resume = sharedData.resume;
+  const shareInfo = sharedData.share_info;
+
+  return (
+    <div className="min-h-screen atlas-gradient">
+      <header className="sticky top-0 z-30 border-b header-blur bg-white/70">
+        <div className="container-xl flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            <img src={LOGO_URL} alt="AtlasCV" className="brand-logo" />
+            <span className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</span>
+            <span className="text-sm" style={{color:"#16A34A"}}>Shared Resume</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">
+              {shareInfo.permissions === 'view' ? 'View Only' : 
+               shareInfo.permissions === 'comment' ? 'Can Comment' : 'Can Suggest'}
+            </Badge>
+            <Button variant="outline" onClick={() => window.location.href = "/"}>
+              Create Your Resume
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container-xl py-6">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Resume Content */}
+          <div className="col-span-12 lg:col-span-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {resume.contact?.full_name || "Resume"}
+                  <span className="ml-2 text-sm font-normal text-slate-500">
+                    ({resume.locale})
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Contact */}
+                {resume.contact && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Contact</h3>
+                    <div className="text-sm space-y-1">
+                      <p>{resume.contact.full_name}</p>
+                      <p>{resume.contact.email}</p>
+                      <p>{resume.contact.phone}</p>
+                      <p>{[resume.contact.city, resume.contact.state, resume.contact.country].filter(Boolean).join(", ")}</p>
+                      {resume.contact.linkedin && <p>LinkedIn: {resume.contact.linkedin}</p>}
+                      {resume.contact.website && <p>Website: {resume.contact.website}</p>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                {resume.summary && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Summary</h3>
+                    <p className="text-sm">{resume.summary}</p>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {resume.skills?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Skills</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {resume.skills.map((skill, i) => (
+                        <Badge key={i} variant="secondary">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience */}
+                {resume.experience?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Experience</h3>
+                    <div className="space-y-4">
+                      {resume.experience.map((exp, i) => (
+                        <div key={i} className="border-l-2 border-blue-200 pl-4">
+                          <h4 className="font-medium">{exp.title} at {exp.company}</h4>
+                          <p className="text-sm text-slate-600">{exp.city} • {exp.start_date} - {exp.end_date || "Present"}</p>
+                          {exp.bullets?.length > 0 && (
+                            <ul className="mt-2 list-disc list-inside text-sm">
+                              {exp.bullets.map((bullet, bi) => (
+                                <li key={bi}>{bullet}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Education */}
+                {resume.education?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Education</h3>
+                    <div className="space-y-2">
+                      {resume.education.map((ed, i) => (
+                        <div key={i}>
+                          <h4 className="font-medium">{ed.degree} - {ed.institution}</h4>
+                          <p className="text-sm text-slate-600">{ed.start_date} - {ed.end_date || "Present"}</p>
+                          {ed.details && <p className="text-sm mt-1">{ed.details}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Projects */}
+                {resume.projects?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Projects</h3>
+                    <div className="space-y-3">
+                      {resume.projects.map((proj, i) => (
+                        <div key={i}>
+                          <h4 className="font-medium">{proj.name}</h4>
+                          {proj.tech?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {proj.tech.map((tech, ti) => (
+                                <Badge key={ti} variant="outline" className="text-xs">{tech}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-sm mt-1">{proj.description}</p>
+                          {proj.link && <p className="text-sm text-blue-600">{proj.link}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Collaboration Panel */}
+          <div className="col-span-12 lg:col-span-4 space-y-4">
+            {shareInfo.can_comment && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    Comments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="bg-slate-50 p-2 rounded text-sm">
+                          <div className="font-medium">{comment.author_name}</div>
+                          <div className="text-slate-600">{comment.content}</div>
+                          <div className="text-slate-400 text-xs mt-1">Section: {comment.section}</div>
+                        </div>
+                      ))}
+                      {comments.length === 0 && (
+                        <p className="text-sm text-slate-500">No comments yet</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Select value={commentSection} onValueChange={setCommentSection}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select section" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="summary">Summary</SelectItem>
+                          <SelectItem value="skills">Skills</SelectItem>
+                          <SelectItem value="experience">Experience</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="projects">Projects</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Textarea
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        rows={3}
+                      />
+                      <Button onClick={addComment} disabled={!newComment.trim() || !commentSection}>
+                        Add Comment
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {shareInfo.can_suggest && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Edit className="h-5 w-5" />
+                    Suggestions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {suggestions.map((suggestion) => (
+                        <div key={suggestion.id} className="bg-amber-50 p-2 rounded text-sm border border-amber-200">
+                          <div className="font-medium">{suggestion.author_name}</div>
+                          <div className="text-slate-600">{suggestion.reason}</div>
+                          <div className="text-xs mt-1">
+                            <span className="font-medium">Section:</span> {suggestion.section}
+                            {suggestion.field && <> • <span className="font-medium">Field:</span> {suggestion.field}</>}
+                          </div>
+                          <div className="mt-1 bg-white p-1 rounded text-xs">
+                            <div><span className="font-medium">Suggested:</span> {suggestion.suggested_value}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {suggestions.length === 0 && (
+                        <p className="text-sm text-slate-500">No suggestions yet</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Select value={newSuggestion.section} onValueChange={(value) => setNewSuggestion(prev => ({ ...prev, section: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select section" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="summary">Summary</SelectItem>
+                          <SelectItem value="skills">Skills</SelectItem>
+                          <SelectItem value="experience">Experience</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="projects">Projects</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="Field (optional)"
+                        value={newSuggestion.field}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, field: e.target.value }))}
+                      />
+                      <Input
+                        placeholder="Current value"
+                        value={newSuggestion.original_value}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, original_value: e.target.value }))}
+                      />
+                      <Input
+                        placeholder="Suggested value"
+                        value={newSuggestion.suggested_value}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, suggested_value: e.target.value }))}
+                      />
+                      <Textarea
+                        placeholder="Reason for suggestion..."
+                        value={newSuggestion.reason}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, reason: e.target.value }))}
+                        rows={3}
+                      />
+                      <Button 
+                        onClick={addSuggestion} 
+                        disabled={!newSuggestion.section || !newSuggestion.suggested_value || !newSuggestion.reason}
+                      >
+                        Add Suggestion
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!shareInfo.can_comment && !shareInfo.can_suggest && (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Eye className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                  <p className="text-sm text-slate-600">View-only access</p>
+                  <p className="text-xs text-slate-500 mt-1">You can view this resume but cannot comment or suggest changes</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          <Route path="/" element={<Home />} />
+          <Route path="/share/:token" element={<SharedResume />} />
         </Routes>
       </BrowserRouter>
     </div>
