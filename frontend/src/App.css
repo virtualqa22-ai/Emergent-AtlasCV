@@ -29,4 +29,48 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, 
 .container-xl { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .editor-pane { height: 520px; }
 .sidebar-scroll { max-height: 480px; overflow: auto; }
-.brand-logo { height: 28px; width: auto; }
+/* Phase 8: Live Preview Styles */
+.resume-preview {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+@media print {
+  .resume-preview {
+    font-size: 12px;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  .resume-preview, .resume-preview * {
+    visibility: visible;
+  }
+  
+  .resume-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+/* Template transition effects */
+.resume-preview .transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Responsive preview adjustments */
+@media (max-width: 1024px) {
+  .resume-preview {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .resume-preview {
+    font-size: 11px;
+    padding: 1rem;
+  }
+}
