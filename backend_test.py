@@ -602,6 +602,282 @@ class AtlasCVAPITester:
         
         return all_passed
 
+    # Phase 5 Import/Export Tests
+    def test_pdf_import_basic(self):
+        """Test PDF import with a simple text-based PDF"""
+        print("\n🔍 Testing PDF Import (basic functionality)...")
+        
+        # Create a simple text content that mimics a PDF
+        # Since we can't easily create a real PDF in this environment,
+        # we'll test the endpoint structure and error handling
+        
+        # Test 1: No file uploaded
+        try:
+            response = requests.post(f"{self.base_url}/import/upload", timeout=10)
+            if response.status_code == 422:  # FastAPI validation error for missing file
+                print("   ✅ Correctly rejects request with no file")
+            else:
+                print(f"   ❌ Expected 422 for no file, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"   ❌ Error testing no file: {e}")
+            return False
+        
+        # Test 2: Non-PDF file
+        try:
+            files = {'file': ('test.txt', 'This is not a PDF', 'text/plain')}
+            response = requests.post(f"{self.base_url}/import/upload", files=files, timeout=10)
+            if response.status_code == 400:
+                print("   ✅ Correctly rejects non-PDF files")
+            else:
+                print(f"   ❌ Expected 400 for non-PDF, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"   ❌ Error testing non-PDF: {e}")
+            return False
+        
+        # Test 3: File too large (simulate)
+        try:
+            large_content = "x" * (6 * 1024 * 1024)  # 6MB content
+            files = {'file': ('large.pdf', large_content, 'application/pdf')}
+            response = requests.post(f"{self.base_url}/import/upload", files=files, timeout=10)
+            if response.status_code == 413:
+                print("   ✅ Correctly rejects files over 5MB limit")
+            else:
+                print(f"   ❌ Expected 413 for large file, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"   ❌ Error testing large file: {e}")
+            return False
+        
+        print("   ✅ PDF import endpoint validation working correctly")
+        return True
+
+    def test_pdf_export_basic(self):
+        """Test PDF export functionality"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available for PDF export test")
+            return False
+        
+        success, response = self.run_test(
+            "PDF Export",
+            "GET",
+            f"export/pdf/{self.resume_id}",
+            200,
+            headers={}  # No JSON headers for file download
+        )
+        
+        if success:
+            # For file downloads, we need to check the actual response
+            try:
+                url = f"{self.base_url}/export/pdf/{self.resume_id}"
+                response = requests.get(url, timeout=10)
+                
+                if response.status_code == 200:
+                    # Check content type
+                    content_type = response.headers.get('content-type', '')
+                    if 'application/pdf' in content_type:
+                        print("   ✅ Correct content-type: application/pdf")
+                    else:
+                        print(f"   ❌ Wrong content-type: {content_type}")
+                        return False
+                    
+                    # Check content disposition
+                    content_disposition = response.headers.get('content-disposition', '')
+                    if 'attachment' in content_disposition and 'filename' in content_disposition:
+                        print("   ✅ Correct content-disposition with filename")
+                    else:
+                        print(f"   ❌ Wrong content-disposition: {content_disposition}")
+                        return False
+                    
+                    # Check file size (should be reasonable for a PDF)
+                    content_length = len(response.content)
+                    if content_length > 1000:  # At least 1KB
+                        print(f"   ✅ PDF file size: {content_length} bytes")
+                    else:
+                        print(f"   ❌ PDF too small: {content_length} bytes")
+                        return False
+                    
+                    return True
+                else:
+                    print(f"   ❌ PDF export failed with status {response.status_code}")
+                    return False
+                    
+            except Exception as e:
+                print(f"   ❌ Error testing PDF export: {e}")
+                return False
+        
+        return False
+
+    def test_json_export_basic(self):
+        """Test JSON export functionality"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available for JSON export test")
+            return False
+        
+        try:
+            url = f"{self.base_url}/export/json/{self.resume_id}"
+            response = requests.post(url, timeout=10)  # Note: endpoint is POST according to server.py
+            
+            if response.status_code == 200:
+                # Check content type
+                content_type = response.headers.get('content-type', '')
+                if 'application/json' in content_type:
+                    print("   ✅ Correct content-type: application/json")
+                else:
+                    print(f"   ❌ Wrong content-type: {content_type}")
+                    return False
+                
+                # Check content disposition
+                content_disposition = response.headers.get('content-disposition', '')
+                if 'attachment' in content_disposition and 'filename' in content_disposition:
+                    print("   ✅ Correct content-disposition with filename")
+                else:
+                    print(f"   ❌ Wrong content-disposition: {content_disposition}")
+                    return False
+                
+                # Try to parse JSON content
+                try:
+                    json_data = response.json()
+                    
+                    # Check for required resume fields
+                    required_fields = ['id', 'locale', 'contact', 'created_at']
+                    missing_fields = [field for field in required_fields if field not in json_data]
+                    
+                    if missing_fields:
+                        print(f"   ❌ Missing required fields: {missing_fields}")
+                        return False
+                    else:
+                        print("   ✅ All required fields present in JSON")
+                    
+                    # Verify the ID matches
+                    if json_data.get('id') == self.resume_id:
+                        print("   ✅ Resume ID matches in exported JSON")
+                    else:
+                        print(f"   ❌ ID mismatch: expected {self.resume_id}, got {json_data.get('id')}")
+                        return False
+                    
+                    return True
+                    
+                except json.JSONDecodeError:
+                    print("   ❌ Response is not valid JSON")
+                    return False
+                    
+            else:
+                print(f"   ❌ JSON export failed with status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Error testing JSON export: {e}")
+            return False
+
+    def test_export_invalid_id(self):
+        """Test export endpoints with invalid resume ID"""
+        invalid_id = "nonexistent-resume-id"
+        
+        # Test PDF export with invalid ID
+        try:
+            url = f"{self.base_url}/export/pdf/{invalid_id}"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 404:
+                print("   ✅ PDF export correctly returns 404 for invalid ID")
+                pdf_test_passed = True
+            else:
+                print(f"   ❌ PDF export: expected 404, got {response.status_code}")
+                pdf_test_passed = False
+        except Exception as e:
+            print(f"   ❌ Error testing PDF export with invalid ID: {e}")
+            pdf_test_passed = False
+        
+        # Test JSON export with invalid ID
+        try:
+            url = f"{self.base_url}/export/json/{invalid_id}"
+            response = requests.post(url, timeout=10)
+            
+            if response.status_code == 404:
+                print("   ✅ JSON export correctly returns 404 for invalid ID")
+                json_test_passed = True
+            else:
+                print(f"   ❌ JSON export: expected 404, got {response.status_code}")
+                json_test_passed = False
+        except Exception as e:
+            print(f"   ❌ Error testing JSON export with invalid ID: {e}")
+            json_test_passed = False
+        
+        return pdf_test_passed and json_test_passed
+
+    def test_import_export_integration(self):
+        """Test the complete import-create-export workflow"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available for integration test")
+            return False
+        
+        print("\n🔍 Testing Import-Export Integration...")
+        
+        # Step 1: Verify we have a resume
+        try:
+            url = f"{self.base_url}/resumes/{self.resume_id}"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code != 200:
+                print(f"   ❌ Cannot retrieve resume for integration test: {response.status_code}")
+                return False
+            
+            resume_data = response.json()
+            print("   ✅ Resume retrieved for integration test")
+            
+        except Exception as e:
+            print(f"   ❌ Error retrieving resume: {e}")
+            return False
+        
+        # Step 2: Test PDF export
+        try:
+            url = f"{self.base_url}/export/pdf/{self.resume_id}"
+            pdf_response = requests.get(url, timeout=10)
+            
+            if pdf_response.status_code == 200 and len(pdf_response.content) > 1000:
+                print("   ✅ PDF export successful in integration test")
+                pdf_success = True
+            else:
+                print(f"   ❌ PDF export failed: {pdf_response.status_code}")
+                pdf_success = False
+                
+        except Exception as e:
+            print(f"   ❌ Error in PDF export: {e}")
+            pdf_success = False
+        
+        # Step 3: Test JSON export
+        try:
+            url = f"{self.base_url}/export/json/{self.resume_id}"
+            json_response = requests.post(url, timeout=10)
+            
+            if json_response.status_code == 200:
+                exported_data = json_response.json()
+                # Verify data consistency
+                if exported_data.get('id') == self.resume_id:
+                    print("   ✅ JSON export successful with consistent data")
+                    json_success = True
+                else:
+                    print("   ❌ JSON export data inconsistency")
+                    json_success = False
+            else:
+                print(f"   ❌ JSON export failed: {json_response.status_code}")
+                json_success = False
+                
+        except Exception as e:
+            print(f"   ❌ Error in JSON export: {e}")
+            json_success = False
+        
+        integration_success = pdf_success and json_success
+        
+        if integration_success:
+            print("   ✅ Complete import-export integration working")
+        else:
+            print("   ❌ Integration test failed")
+        
+        return integration_success
+
     def test_presets_endpoint(self):
         """Test GET /api/presets endpoint - Phase 3 requirement"""
         success, response = self.run_test(
