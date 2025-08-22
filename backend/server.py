@@ -153,7 +153,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "EU": {
         "label": "European Union (Europass)",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "jd", "templates", "summary", "experience", "education", "skills", "projects"],
         "labels": {"experience": "Experience", "education": "Education (Europass)"},
         "rules": [
             "GDPR-friendly contact (avoid DOB unless asked)",
