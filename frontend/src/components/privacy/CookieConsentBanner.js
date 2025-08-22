@@ -28,7 +28,7 @@ const CookieConsentBanner = ({ onConsentChange }) => {
         setIsVisible(true);
       }
     }
-  }, [onConsentChange]);
+  }, []); // Remove onConsentChange dependency to prevent infinite loop
 
   const saveConsent = (acceptAll = false) => {
     const finalPreferences = acceptAll
