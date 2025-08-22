@@ -475,6 +475,38 @@ function Home() {
                 Local Mode
               </div>
             )}
+            
+            {/* Phase 8: Preview Controls */}
+            <div className="hidden lg:flex items-center gap-1 border rounded">
+              <Button
+                variant={previewMode === 'edit' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPreviewMode('edit')}
+                className="text-xs"
+              >
+                <FileText className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button
+                variant={previewMode === 'split' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPreviewMode('split')}
+                className="text-xs"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                Split
+              </Button>
+              <Button
+                variant={previewMode === 'preview' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPreviewMode('preview')}
+                className="text-xs"
+              >
+                <Search className="h-4 w-4" />
+                Preview
+              </Button>
+            </div>
+            
             <Button 
               variant="ghost" 
               size="sm"
