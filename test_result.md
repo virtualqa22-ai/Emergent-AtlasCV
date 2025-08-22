@@ -258,13 +258,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Fix React infinite loop error in cookie consent"
-    - "Fix missing Settings button in header"
-    - "Re-test privacy features after fixes"
+    - "Re-test cookie consent banner after infinite loop fix"
+    - "Verify Settings button accessibility"
+    - "Re-test local-only mode functionality" 
+    - "Re-test privacy settings UI"
   stuck_tasks:
-    - "Add GDPR cookie consent banner"
-    - "Create privacy settings and data management UI"
-    - "Implement local-only mode for privacy-conscious users"
+    []
   test_all: false
   test_priority: "stuck_first"
 
