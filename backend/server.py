@@ -129,6 +129,38 @@ class ValidateResult(BaseModel):
     locale: str
 
 # -----------------------
+# GDPR and Privacy Models
+# -----------------------
+class PrivacyConsentInput(BaseModel):
+    user_identifier: str
+    has_consent: bool = True
+    version: str = "1.0"
+    consent_types: List[str] = ["functional"]
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+class PrivacyConsentResult(BaseModel):
+    user_identifier: str
+    has_consent: bool
+    consent_date: Optional[str]
+    consent_version: str
+    consent_types: List[str]
+
+class DataExportRequest(BaseModel):
+    user_identifier: str  # email or resume ID
+    format: str = "json"  # json, csv (future)
+
+class DataDeletionRequest(BaseModel):
+    user_identifier: str  # email or resume ID
+    confirmation_token: Optional[str] = None
+    reason: Optional[str] = None
+
+class LocalModeSettings(BaseModel):
+    enabled: bool = False
+    encrypt_local_data: bool = True
+    auto_clear_after_hours: int = 24
+
+# -----------------------
 # Presets (field order, labels, date formats)
 # -----------------------
 PRESETS: Dict[str, Dict[str, Any]] = {
