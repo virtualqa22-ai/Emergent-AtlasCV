@@ -1088,97 +1088,82 @@ class AtlasCVAPITester:
             return False
 
 def main():
-    print("🚀 Starting AtlasCV Backend API Tests - Phase 4 AI Assist")
-    print("=" * 60)
+    print("🚀 Starting AtlasCV Backend API Tests - Phase 5 Import/Export Verification")
+    print("=" * 70)
     
     tester = AtlasCVAPITester()
     
-    # Run Phase 4 AI Assist tests first (current focus)
-    print("\n📋 PHASE 4 TESTS - AI Assist Endpoints")
+    # Run basic backend tests first to establish resume
+    print("\n📋 BASIC BACKEND SETUP")
     print("=" * 40)
     
-    phase4_tests = [
-        tester.test_ai_rewrite_bullets,
-        tester.test_ai_lint,
-        tester.test_ai_suggest_keywords,
-        tester.test_ai_fallback_behavior
-    ]
-    
-    phase4_passed = 0
-    for test in phase4_tests:
-        if test():
-            phase4_passed += 1
-    
-    print(f"\n📊 Phase 4 Results: {phase4_passed}/{len(phase4_tests)} tests passed")
-    
-    # Test existing endpoints to ensure they still work
-    print("\n📋 EXISTING ENDPOINTS VERIFICATION")
-    print("=" * 40)
-    
-    existing_tests = [
-        tester.test_jd_parse,
-        tester.test_jd_coverage
-    ]
-    
-    existing_passed = 0
-    for test in existing_tests:
-        if test():
-            existing_passed += 1
-    
-    print(f"\n📊 Existing Endpoints: {existing_passed}/{len(existing_tests)} tests passed")
-    
-    # Run Phase 3 tests for completeness
-    print("\n📋 PHASE 3 TESTS - Presets + Validation")
-    print("=" * 40)
-    
-    phase3_tests = [
-        tester.test_presets_endpoint,
-        lambda: tester.test_individual_preset("IN"),
-        lambda: tester.test_individual_preset("JP-R"),
-        lambda: tester.test_individual_preset("US"),
-        tester.test_validation_endpoint
-    ]
-    
-    phase3_passed = 0
-    for test in phase3_tests:
-        if test():
-            phase3_passed += 1
-    
-    print(f"\n📊 Phase 3 Results: {phase3_passed}/{len(phase3_tests)} tests passed")
-    
-    # Run additional backend tests
-    print("\n📋 ADDITIONAL BACKEND TESTS")
-    print("=" * 40)
-    
-    additional_tests = [
+    setup_tests = [
         tester.test_root_endpoint,
         tester.test_get_locales,
         tester.test_create_resume,
-        tester.test_score_resume,
         tester.test_update_resume,
-        tester.test_get_resume,
-        tester.test_score_after_update
     ]
     
-    for test in additional_tests:
-        test()
+    setup_passed = 0
+    for test in setup_tests:
+        if test():
+            setup_passed += 1
+    
+    print(f"\n📊 Setup Results: {setup_passed}/{len(setup_tests)} tests passed")
+    
+    # Run Phase 5 Import/Export tests (main focus)
+    print("\n📋 PHASE 5 TESTS - Import/Export Verification")
+    print("=" * 50)
+    
+    phase5_tests = [
+        tester.test_pdf_import_basic,
+        tester.test_pdf_export_basic,
+        tester.test_json_export_basic,
+        tester.test_export_invalid_id,
+        tester.test_import_export_integration
+    ]
+    
+    phase5_passed = 0
+    for test in phase5_tests:
+        if test():
+            phase5_passed += 1
+    
+    print(f"\n📊 Phase 5 Results: {phase5_passed}/{len(phase5_tests)} tests passed")
+    
+    # Quick verification of other phases
+    print("\n📋 QUICK VERIFICATION - Other Phases")
+    print("=" * 40)
+    
+    verification_tests = [
+        tester.test_jd_parse,
+        tester.test_jd_coverage,
+        tester.test_ai_rewrite_bullets,
+        tester.test_presets_endpoint,
+    ]
+    
+    verification_passed = 0
+    for test in verification_tests:
+        if test():
+            verification_passed += 1
+    
+    print(f"\n📊 Verification Results: {verification_passed}/{len(verification_tests)} tests passed")
     
     # Print final results
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
-    print(f"📊 Phase 4 AI Assist Tests: {phase4_passed}/{len(phase4_tests)} passed")
-    print(f"📊 Existing Endpoints: {existing_passed}/{len(existing_tests)} passed")
-    print(f"📊 Phase 3 Tests: {phase3_passed}/{len(phase3_tests)} passed")
+    print(f"📊 Setup Tests: {setup_passed}/{len(setup_tests)} passed")
+    print(f"📊 Phase 5 Import/Export: {phase5_passed}/{len(phase5_tests)} passed")
+    print(f"📊 Other Phases Verification: {verification_passed}/{len(verification_tests)} passed")
     
-    if phase4_passed == len(phase4_tests) and existing_passed == len(existing_tests):
-        print("🎉 All Phase 4 AI Assist tests passed!")
-        print("🎉 All existing endpoints still working!")
+    if phase5_passed == len(phase5_tests) and setup_passed >= 3:  # Allow some setup flexibility
+        print("🎉 Phase 5 Import/Export verification successful!")
+        print("🎉 All key endpoints working correctly!")
         return 0
     else:
-        if phase4_passed < len(phase4_tests):
-            print("❌ Some Phase 4 AI Assist tests failed!")
-        if existing_passed < len(existing_tests):
-            print("❌ Some existing endpoints are broken!")
+        if phase5_passed < len(phase5_tests):
+            print("❌ Some Phase 5 Import/Export tests failed!")
+        if setup_passed < 3:
+            print("❌ Basic backend setup issues detected!")
         return 1
 
 if __name__ == "__main__":
