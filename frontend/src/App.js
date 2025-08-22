@@ -675,39 +675,6 @@ function Home() {
             </div>
           )}
         </div>
-              <div className="mt-4 text-xs label-sub">Heuristic score + preset validation. AI tips coming next.</div>
-            </CardContent>
-          </Card>
-
-          <Card className="section card-hover">
-            <CardHeader>
-              <CardTitle className="h-heading">Preset</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm">Current: <span className="font-medium">{presets[form.locale]?.label || form.locale}</span></div>
-              <div className="text-xs label-sub mt-2">Date format: {preset.date_format}</div>
-              <div className="text-xs label-sub mt-2">Section order: {leftOrder.join(" → ")}</div>
-              {preset.rules?.length ? (
-                <div className="mt-2 text-sm">
-                  <div className="font-medium mb-1">Key rules</div>
-                  <ul className="list-disc pl-5">
-                    {preset.rules.map((r, i) => (<li key={i}>{r}</li>))}
-                  </ul>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <Card className="section card-hover">
-            <CardHeader>
-              <CardTitle className="h-heading">Import/Export (coming soon)</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
-              <Button variant="outline"><UploadCloud className="h-4 w-4" />Import</Button>
-              <Button variant="outline"><FileText className="h-4 w-4" />Export</Button>
-            </CardContent>
-          </Card>
-        </div>
       </main>
 
       {/* Privacy Settings Overlay */}
