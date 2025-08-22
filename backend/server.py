@@ -1259,7 +1259,7 @@ def generate_pdf_resume(resume: Resume) -> bytes:
     labels = preset.get("labels", {})
     
     for section in section_order:
-        if section == "profile" or section == "jd":
+        if section == "profile" or section == "jd" or section == "templates":
             continue  # Skip UI-only sections
             
         if section == "summary" and resume.summary:
