@@ -184,7 +184,7 @@ metadata:
 test_plan:
   current_focus:
     - "Backend: All Phase 5 import/export endpoints tested and working"
-    - "Frontend: Test file upload, import modal, and export downloads"
+    - "Frontend: All Import/Export UI features tested and working"
     - "Integration: Complete import-to-export workflow tested and working"
   stuck_tasks: []
   test_all: true
