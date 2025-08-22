@@ -442,11 +442,25 @@ function Home() {
             <span className="text-sm" style={{color:"#16A34A"}}>ATS-Optimized Resume Builder</span>
           </div>
           <div className="flex items-center gap-2">
+            {isLocalMode && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                <Lock className="h-3 w-3" />
+                Local Mode
+              </div>
+            )}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowPrivacySettings(!showPrivacySettings)}
+              className="text-gray-600"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button className="btn-cta" onClick={validateLocale} variant="outline">
               <ShieldCheck className="h-4 w-4" /> Validate preset
             </Button>
             <Button className="btn-cta" onClick={saveResume} disabled={saving}>
-              <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
+              <Save className="h-4 w-4" /> {saving ? "Saving..." : (isLocalMode ? "Save Local" : "Save Draft")}
             </Button>
           </div>
         </div>
