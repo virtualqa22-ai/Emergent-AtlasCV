@@ -839,7 +839,14 @@ function Home() {
           <CardTitle className="h-heading">Skills</CardTitle>
         </CardHeader>
         <CardContent>
-          <Input placeholder="Comma-separated skills (e.g., React, Node, AWS)" value={form.skills.join(", ")} onChange={(e) => handleChange("skills", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} />
+          <Input 
+            placeholder="Comma-separated skills (e.g., React, Node, AWS)" 
+            value={form.skills.join(", ")} 
+            onChange={(e) => handleChange("skills", e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
+            aria-describedby="skills-help"
+            aria-label="Professional skills"
+          />
+          <div id="skills-help" className="sr-only">List your professional skills separated by commas. Include both technical and soft skills relevant to your target role.</div>
           <p className="text-xs label-sub mt-2">Aim for 8–12 concise, role-aligned skills.</p>
         </CardContent>
       </Card>
