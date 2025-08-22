@@ -175,7 +175,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "IN": {
         "label": "India",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "skills", "experience", "projects", "education"],
+        "section_order": ["profile", "jd", "templates", "summary", "skills", "experience", "projects", "education"],
         "labels": {"experience": "Experience", "projects": "Projects (important)"},
         "rules": [
             "Phone should include country code (e.g., +91)",
