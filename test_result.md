@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "AtlasCV Phase 7: Privacy/Compliance Implementation. Add encryption for sensitive fields at rest, local-only mode, GDPR tooling (cookie consent, delete-my-data endpoints), and comprehensive testing."
+user_problem_statement: "AtlasCV Phase 8: Live Preview of Resume. Integrate real-time rendering engine with debounced updates, support different template styles with instant switching, and create responsive side-by-side editor (left: input, right: preview)."
 
 backend:
   - task: "Implement field-level encryption for sensitive resume data"
