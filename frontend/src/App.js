@@ -967,23 +967,23 @@ function Home() {
           <Card className="section card-hover">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h-heading">
-                <BadgeCheck className="h-5 w-5 text-slate-700" /> 
+                <BadgeCheck className="h-5 w-5 text-slate-700" aria-hidden="true" /> 
                 Live ATS Heuristic
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-semibold" role="status" aria-live="polite">
-                Score: <span className={scoreColor}>{ats.score}</span>/100
+              <div className="text-3xl font-semibold" role="status" aria-live="polite" aria-atomic="true">
+                Score: <span className={scoreColor} aria-label={`ATS score ${ats.score} out of 100`}>{ats.score}</span>/100
               </div>
-              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600" role="list">
-                {ats.hints.map((h, i) => (<li key={i}>{h}</li>))}
-                {ats.hints.length === 0 ? <li>Looks solid. Keep quantifying impact.</li> : null}
+              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600" role="list" aria-label="ATS improvement hints">
+                {ats.hints.map((h, i) => (<li key={i} role="listitem">{h}</li>))}
+                {ats.hints.length === 0 ? <li role="listitem">Looks solid. Keep quantifying impact.</li> : null}
               </ul>
               {validation?.issues?.length > 0 && (
-                <div className="mt-4">
+                <div className="mt-4" role="region" aria-label="Locale validation issues">
                   <div className="font-medium h-heading">Locale Validation</div>
                   <ul className="list-disc pl-5 text-sm text-slate-600 mt-1" role="list">
-                    {validation.issues.map((x, i) => (<li key={i}>{x}</li>))}
+                    {validation.issues.map((x, i) => (<li key={i} role="listitem">{x}</li>))}
                   </ul>
                 </div>
               )}
