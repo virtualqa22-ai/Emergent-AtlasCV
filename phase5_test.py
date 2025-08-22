@@ -332,29 +332,34 @@ startxref
         )
         
         if success:
-            # Check content type
-            content_type = response.headers.get('content-type', '')
-            if 'application/pdf' in content_type:
-                print("   ✅ Correct content type: application/pdf")
+            # Check if response is a requests.Response object or dict
+            if hasattr(response, 'headers'):
+                # Check content type
+                content_type = response.headers.get('content-type', '')
+                if 'application/pdf' in content_type:
+                    print("   ✅ Correct content type: application/pdf")
+                else:
+                    print(f"   ⚠️  Content type: {content_type}")
+                
+                # Check content disposition header
+                content_disposition = response.headers.get('content-disposition', '')
+                if 'attachment' in content_disposition and 'filename' in content_disposition:
+                    print(f"   ✅ Correct content disposition: {content_disposition}")
+                else:
+                    print(f"   ⚠️  Content disposition: {content_disposition}")
+                
+                # Check PDF content size
+                pdf_size = len(response.content)
+                print(f"   📊 PDF size: {pdf_size} bytes")
+                
+                if pdf_size > 100:  # Should be a reasonable PDF size
+                    print("   ✅ PDF has reasonable size")
+                    return True
+                else:
+                    print("   ❌ PDF size too small, might be empty")
+                    return False
             else:
-                print(f"   ⚠️  Content type: {content_type}")
-            
-            # Check content disposition header
-            content_disposition = response.headers.get('content-disposition', '')
-            if 'attachment' in content_disposition and 'filename' in content_disposition:
-                print(f"   ✅ Correct content disposition: {content_disposition}")
-            else:
-                print(f"   ⚠️  Content disposition: {content_disposition}")
-            
-            # Check PDF content size
-            pdf_size = len(response.content)
-            print(f"   📊 PDF size: {pdf_size} bytes")
-            
-            if pdf_size > 100:  # Should be a reasonable PDF size
-                print("   ✅ PDF has reasonable size")
-                return True
-            else:
-                print("   ❌ PDF size too small, might be empty")
+                print("   ❌ Expected PDF response but got parsed data")
                 return False
         
         return False
