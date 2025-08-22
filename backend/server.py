@@ -163,7 +163,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "AU": {
         "label": "Australia",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "skills", "education", "projects"],
+        "section_order": ["profile", "jd", "templates", "summary", "experience", "skills", "education", "projects"],
         "labels": {"experience": "Employment History"},
         "rules": [
             "2–3 pages acceptable",
