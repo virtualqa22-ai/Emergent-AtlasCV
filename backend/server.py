@@ -185,7 +185,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "JP-R": {
         "label": "Japan — Rirekisho",
         "date_format": "YYYY/MM",
-        "section_order": ["profile", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "templates", "summary", "experience", "education", "skills", "projects"],
         "labels": {"experience": "職歴 (Shokureki)", "education": "学歴 (Gakureki)"},
         "rules": [
             "Structured, chronological",
