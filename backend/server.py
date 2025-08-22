@@ -678,6 +678,80 @@ async def score_resume(resume_id: str):
     return compute_heuristic_score(data)
 
 # -----------------------
+# Templates (Phase 6)
+# -----------------------
+class ResumeTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    category: str = Field(default="professional")  # professional, creative, academic, technical
+    preview_image: str = ""
+    ats_optimized: bool = True
+    layout_config: Dict[str, Any] = {}
+    styling: Dict[str, Any] = {}
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ShareableLink(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    resume_id: str
+    owner_id: str = "anonymous"  # For future user auth
+    share_token: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
+    permissions: str = Field(default="view")  # view, comment, suggest
+    expires_at: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    is_active: bool = True
+
+class Comment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    resume_id: str
+    share_link_id: Optional[str] = None
+    author_name: str = "Anonymous"
+    author_email: Optional[str] = None
+    section: str  # "contact", "experience.0", "summary", etc.
+    field: Optional[str] = None  # specific field if applicable
+    content: str
+    type: str = Field(default="comment")  # comment, suggestion, change_request
+    status: str = Field(default="open")  # open, resolved, applied, rejected
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    resolved_at: Optional[str] = None
+
+class Suggestion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    resume_id: str
+    share_link_id: Optional[str] = None
+    author_name: str = "Anonymous"
+    section: str
+    field: Optional[str] = None
+    original_value: str = ""
+    suggested_value: str = ""
+    reason: str = ""
+    status: str = Field(default="pending")  # pending, accepted, rejected
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    applied_at: Optional[str] = None
+
+class CreateShareLinkRequest(BaseModel):
+    resume_id: str
+    permissions: str = Field(default="view")
+    expires_in_days: Optional[int] = None
+
+class CreateCommentRequest(BaseModel):
+    resume_id: str
+    section: str
+    field: Optional[str] = None
+    content: str
+    author_name: str = "Anonymous"
+    author_email: Optional[str] = None
+
+class CreateSuggestionRequest(BaseModel):
+    resume_id: str
+    section: str
+    field: Optional[str] = None
+    original_value: str
+    suggested_value: str
+    reason: str = ""
+    author_name: str = "Anonymous"
+
+# -----------------------
 # Import/Export (Phase 5)
 # -----------------------
 class ImportResponse(BaseModel):
