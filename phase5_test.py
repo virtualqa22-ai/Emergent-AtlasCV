@@ -400,10 +400,11 @@ startxref
                         successful_exports += 1
                         print(f"   ✅ {locale} locale export successful")
                         
-                        # Check filename contains locale
-                        content_disposition = export_response.headers.get('content-disposition', '')
-                        if locale in content_disposition:
-                            print(f"   ✅ {locale} filename contains locale")
+                        # Check filename contains locale if response has headers
+                        if hasattr(export_response, 'headers'):
+                            content_disposition = export_response.headers.get('content-disposition', '')
+                            if locale in content_disposition:
+                                print(f"   ✅ {locale} filename contains locale")
                     else:
                         print(f"   ❌ {locale} locale export failed")
                 else:
