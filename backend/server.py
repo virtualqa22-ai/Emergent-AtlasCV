@@ -142,7 +142,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "US": {
         "label": "United States",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "jd", "templates", "summary", "experience", "education", "skills", "projects"],
         "labels": {"experience": "Work Experience", "education": "Education"},
         "rules": [
             "No photo in resume",
