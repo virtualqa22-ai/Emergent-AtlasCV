@@ -29,12 +29,35 @@ const LOGO_URL = "https://customer-assets.emergentagent.com/job_cv-builder-26/ar
 
 const defaultResumeIN = {
   locale: "IN",
-  contact: { full_name: "", email: "", phone: "", city: "", state: "", country: "India", linkedin: "", website: "" },
+  contact: { 
+    full_name: "", 
+    email: "", 
+    phone: "", 
+    city: "", 
+    state: "", 
+    country: "India", 
+    linkedin: "", 
+    website: "",
+    // Phase 9: Optional fields
+    photo_url: "",
+    date_of_birth: ""
+  },
   summary: "",
   skills: [],
   experience: [],
   education: [],
   projects: [],
+  // Phase 9: New optional sections
+  certifications: [],
+  references: [],
+  personal_details: {
+    nationality: "",
+    visa_status: "",
+    languages: [],
+    hobbies: [],
+    volunteer_work: "",
+    awards: []
+  }
 };
 
 function useResumeDraft() {
