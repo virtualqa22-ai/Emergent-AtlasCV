@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Settings, Lock, Camera, Calendar, Award, Users, Globe, Heart } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./components/ui/dialog";
 import { Progress } from "./components/ui/progress";
 
 // Phase 7 Privacy Components
