@@ -526,6 +526,92 @@ async def score_resume(resume_id: str):
     data = Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
     return compute_heuristic_score(data)
 
+# -----------------------
+# GDPR and Privacy Compliance Routes
+# -----------------------
+@api_router.post("/gdpr/export-my-data")
+async def export_user_data(request: DataExportRequest):
+    """Export all user data for GDPR compliance"""
+    try:
+        export_data = await gdpr_compliance.export_user_data(request.user_identifier)
+        return JSONResponse(
+            content=export_data,
+            headers={
+                "Content-Disposition": f"attachment; filename=atlascv-data-export-{request.user_identifier}-{datetime.now().strftime('%Y%m%d')}.json"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/gdpr/delete-my-data")
+async def delete_user_data(request: DataDeletionRequest):
+    """Delete all user data for GDPR compliance"""
+    try:
+        deletion_result = await gdpr_compliance.delete_user_data(
+            request.user_identifier, 
+            request.confirmation_token
+        )
+        return deletion_result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/privacy/consent", response_model=PrivacyConsentResult)
+async def record_privacy_consent(request: PrivacyConsentInput):
+    """Record user's privacy policy consent"""
+    try:
+        consent_record = await gdpr_compliance.record_privacy_consent(
+            request.user_identifier, 
+            request.dict()
+        )
+        return PrivacyConsentResult(**consent_record)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/privacy/consent/{user_identifier}", response_model=PrivacyConsentResult)
+async def get_privacy_consent(user_identifier: str):
+    """Get user's privacy policy consent status"""
+    try:
+        consent_data = await gdpr_compliance.get_privacy_policy_acceptance(user_identifier)
+        return PrivacyConsentResult(**consent_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/privacy/info/{resume_id}")
+async def get_privacy_info(resume_id: str):
+    """Get privacy information about stored resume data"""
+    try:
+        found = await db.resumes.find_one({"id": resume_id})
+        if not found:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        
+        privacy_info = privacy_encryption.get_privacy_info(found)
+        return {
+            "resume_id": resume_id,
+            "privacy_info": privacy_info,
+            "gdpr_rights": {
+                "data_export": "Available via /api/gdpr/export-my-data",
+                "data_deletion": "Available via /api/gdpr/delete-my-data",
+                "data_portability": "JSON export format supported"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/local-mode/settings")
+async def update_local_mode_settings(settings: LocalModeSettings):
+    """Update local-only mode settings (frontend state management)"""
+    return {
+        "local_mode": settings.enabled,
+        "encryption_enabled": settings.encrypt_local_data,
+        "auto_clear_hours": settings.auto_clear_after_hours,
+        "message": "Local mode settings updated. Data will be managed client-side.",
+        "recommendations": [
+            "Enable local encryption for sensitive data",
+            "Consider periodic data export backups",
+            "Be aware that local data may be lost on browser clear"
+        ]
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
