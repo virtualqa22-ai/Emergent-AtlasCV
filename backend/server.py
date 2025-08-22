@@ -196,7 +196,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     "JP-S": {
         "label": "Japan — Shokumu Keirekisho",
         "date_format": "YYYY/MM",
-        "section_order": ["profile", "summary", "skills", "projects", "experience", "education"],
+        "section_order": ["profile", "templates", "summary", "skills", "projects", "experience", "education"],
         "labels": {"experience": "職務経歴", "skills": "スキルマトリクス"},
         "rules": [
             "Narrative achievements",
