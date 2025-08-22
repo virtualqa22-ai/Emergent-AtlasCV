@@ -495,7 +495,7 @@ function Home() {
 
   useEffect(() => { if (jdKeywords.length) { checkCoverage(); } }, [jdKeywords, form]);
 
-  const preset = presets[form.locale] || { date_format: "YYYY-MM", section_order: ["profile","jd","summary","skills","experience","projects","education"], labels: {} };
+  const preset = presets[form.locale] || { date_format: "YYYY-MM", section_order: ["profile","jd","templates","summary","skills","experience","projects","education"], labels: {} };
 
   const scoreColor = useMemo(() => ats.score >= 80 ? "text-emerald-600" : ats.score >= 60 ? "text-amber-600" : "text-rose-600", [ats.score]);
 
