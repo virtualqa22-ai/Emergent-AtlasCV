@@ -570,6 +570,7 @@ async def validate_resume(input: ValidateInput):
     r = input.resume
     code = r.locale if r.locale in PRESETS else "IN"
     preset = PRESETS[code]
+    optional_fields = preset.get("optional_fields", {})
     issues: List[str] = []
 
     # date format suggestion check
@@ -593,16 +594,40 @@ async def validate_resume(input: ValidateInput):
         if ed.end_date and not check_date(ed.end_date):
             issues.append(f"Use {date_fmt} for end_date in education")
 
+    # Phase 9: Optional field validations based on locale
+    if r.contact.photo_url and not optional_fields.get("photo", True):
+        issues.append(f"Photos are not recommended for {preset['label']} resumes")
+    
+    if r.contact.date_of_birth and not optional_fields.get("date_of_birth", True):
+        issues.append(f"Date of birth not recommended for {preset['label']} resumes")
+    
+    # Japanese resumes typically require photo if JP-R
+    if code == "JP-R" and not r.contact.photo_url:
+        issues.append("Photo is typically required for Rirekisho format")
+
     # locale-specific quick rules
-    if code == "US":
+    if code == "US" or code == "CA":
         if not r.contact.state:
-            issues.append("Add state in Contact for US resumes")
+            issues.append(f"Add state/province in Contact for {preset['label']} resumes")
+        if r.contact.photo_url:
+            issues.append(f"Remove photo for {preset['label']} resumes (discrimination prevention)")
+    
     if code == "IN":
         if r.contact.phone and not r.contact.phone.strip().startswith("+"):
             issues.append("Include +country code in phone (e.g., +91…)")
+    
+    if code in ["SG", "AE"]:
+        if r.personal_details and not r.personal_details.nationality:
+            issues.append(f"Nationality information important for {preset['label']} resumes")
+    
     if code.startswith("JP"):
         if date_fmt != "YYYY/MM":
             issues.append("Japan presets use YYYY/MM date format")
+    
+    # Canada-specific validation
+    if code == "CA" and r.personal_details:
+        if "English" not in r.personal_details.languages and "French" not in r.personal_details.languages:
+            issues.append("Consider mentioning English/French language proficiency for Canadian resumes")
 
     return ValidateResult(issues=issues, locale=code)
 
