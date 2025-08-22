@@ -565,6 +565,20 @@ async def get_preset(code: str):
         raise HTTPException(status_code=404, detail="Preset not found")
     return {"code": code, **PRESETS[code]}
 
+@api_router.get("/presets/{code}/optional-fields")
+async def get_optional_fields(code: str):
+    """Get optional field configuration for a specific locale"""
+    if code not in PRESETS:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    
+    preset = PRESETS[code]
+    return {
+        "locale": code,
+        "optional_fields": preset.get("optional_fields", {}),
+        "section_order": preset.get("section_order", []),
+        "labels": preset.get("labels", {})
+    }
+
 @api_router.post("/validate", response_model=ValidateResult)
 async def validate_resume(input: ValidateInput):
     r = input.resume
