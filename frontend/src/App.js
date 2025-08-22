@@ -552,17 +552,6 @@ function Home() {
         </div>
       )}
 
-  const handleConsentChange = useCallback((consentData) => {
-    // Only update if consent actually changed
-    if (!cookieConsent || JSON.stringify(cookieConsent) !== JSON.stringify(consentData)) {
-      setCookieConsent(consentData);
-      // Handle analytics/marketing consent here only on actual change
-      if (consentData.preferences?.analytics && !cookieConsent?.preferences?.analytics) {
-        console.log("Analytics enabled");
-      }
-    }
-  }, [cookieConsent]);
-
       {/* Cookie Consent Banner */}
       <CookieConsentBanner 
         onConsentChange={handleConsentChange}
