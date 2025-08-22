@@ -834,7 +834,16 @@ function Home() {
     ) : null,
   };
 
-  const leftOrder = preset.section_order || ["profile","jd","summary","skills","experience","projects","education"];
+  // Phase 9: Use locale-specific section order with optional fields
+  const leftOrder = (optionalFieldsConfig.section_order || preset.section_order || ["profile","jd","summary","skills","experience","projects","education"])
+    .filter(key => {
+      // Always show core sections
+      if (['profile', 'jd', 'summary', 'skills', 'experience', 'education', 'projects'].includes(key)) {
+        return true;
+      }
+      // Show optional sections only if they're visible
+      return visibleOptionalFields[key];
+    });
 
   return (
     <div className="min-h-screen atlas-gradient">
