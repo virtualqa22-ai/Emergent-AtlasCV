@@ -9,7 +9,7 @@ import { Label } from "./components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
-import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Settings, Lock } from "lucide-react";
+import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Settings, Lock, Camera, Calendar, Award, Users, Globe, Heart } from "lucide-react";
 import { Progress } from "./components/ui/progress";
 
 // Phase 7 Privacy Components
