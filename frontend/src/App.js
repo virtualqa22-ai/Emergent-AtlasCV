@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import axios from "axios";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -9,8 +9,13 @@ import { Label } from "./components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
-import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Share2, MessageCircle, Users, Eye, Edit, Check, X, Palette, Zap, Crown, Code, Brush } from "lucide-react";
 import { Progress } from "./components/ui/progress";
+import { Badge } from "./components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./components/ui/dialog";
+import { ScrollArea } from "./components/ui/scroll-area";
+import { Separator } from "./components/ui/separator";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -36,6 +41,8 @@ function useResumeDraft() {
 
 function Home() {
   const { resumeId, remember } = useResumeDraft();
+  
+  // Existing state
   const [locales, setLocales] = useState([]);
   const [presets, setPresets] = useState({});
   const [form, setForm] = useState(defaultResumeIN);
@@ -46,6 +53,363 @@ function Home() {
   const [coverage, setCoverage] = useState(null);
   const [parsing, setParsing] = useState(false);
   const [validation, setValidation] = useState({ issues: [], locale: "IN" });
+  const [lintSummary, setLintSummary] = useState({ loading: false, issues: [], suggestions: [] });
+  const [bulletLint, setBulletLint] = useState({}); // key: "idx-bi" -> { loading, issues, suggestions }
+  const [rewriting, setRewriting] = useState(""); // key = "idx-bi"
+  const [synLoading, setSynLoading] = useState(false);
+  const [synonymsData, setSynonymsData] = useState({ synonyms: {}, prioritize: [] });
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  // Phase 6: Template & Collaboration state
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  
+  // Collaboration state
+  const [shareLink, setShareLink] = useState(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [sharePermissions, setSharePermissions] = useState("view");
+  const [comments, setComments] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showCollabPanel, setShowCollabPanel] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [commentSection, setCommentSection] = useState("");
+  
+  // Accessibility refs
+  const skipLinkRef = useRef(null);
+  const mainContentRef = useRef(null);
+  const [focusVisible, setFocusVisible] = useState(false);
+
+  const keyFor = (i, bi) => `${i}-${bi}`;
+
+  // Accessibility: Handle keyboard navigation  
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Tab') {
+      setFocusVisible(true);
+    }
+    // Skip link functionality
+    if (e.key === 'Enter' && e.target === skipLinkRef.current) {
+      e.preventDefault();
+      mainContentRef.current?.focus();
+    }
+  }, []);
+
+  const handleMouseDown = useCallback(() => {
+    setFocusVisible(false);
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [handleKeyDown, handleMouseDown]);
+
+  // Phase 6: Template functions
+  const loadTemplates = async () => {
+    try {
+      const { data } = await axios.get(`${API}/templates`);
+      setTemplates(data.templates || []);
+    } catch (e) { 
+      console.error("Failed to load templates:", e); 
+    }
+  };
+
+  const applyTemplate = async (templateId) => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    setApplyingTemplate(true);
+    try {
+      const { data } = await axios.post(`${API}/templates/${templateId}/apply/${resumeId}`);
+      setForm(data);
+      setSelectedTemplate(templateId);
+      setShowTemplateDialog(false);
+      alert("Template applied successfully!");
+    } catch (e) {
+      console.error("Failed to apply template:", e);
+      alert("Failed to apply template. Please try again.");
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
+  // Phase 6: Collaboration functions
+  const createShareLink = async () => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    try {
+      const { data } = await axios.post(`${API}/share`, {
+        resume_id: resumeId,
+        permissions: sharePermissions,
+        expires_in_days: 30
+      });
+      setShareLink(data);
+      navigator.clipboard.writeText(`${window.location.origin}/share/${data.share_token}`);
+      alert("Share link created and copied to clipboard!");
+    } catch (e) {
+      console.error("Failed to create share link:", e);
+      alert("Failed to create share link. Please try again.");
+    }
+  };
+
+  const loadCollaborationData = async () => {
+    if (!resumeId) return;
+    
+    try {
+      const [commentsRes, suggestionsRes] = await Promise.all([
+        axios.get(`${API}/comments/${resumeId}`),
+        axios.get(`${API}/suggestions/${resumeId}`)
+      ]);
+      setComments(commentsRes.data.comments || []);
+      setSuggestions(suggestionsRes.data.suggestions || []);
+    } catch (e) {
+      console.error("Failed to load collaboration data:", e);
+    }
+  };
+
+  const addComment = async () => {
+    if (!newComment.trim() || !commentSection) return;
+    
+    try {
+      const { data } = await axios.post(`${API}/comments`, {
+        resume_id: resumeId,
+        section: commentSection,
+        content: newComment,
+        author_name: "You"
+      });
+      setComments(prev => [...prev, data]);
+      setNewComment("");
+      setCommentSection("");
+    } catch (e) {
+      console.error("Failed to add comment:", e);
+      alert("Failed to add comment. Please try again.");
+    }
+  };
+
+  const acceptSuggestion = async (suggestionId) => {
+    try {
+      await axios.post(`${API}/suggestions/${suggestionId}/accept`);
+      setSuggestions(prev => 
+        prev.map(s => s.id === suggestionId ? { ...s, status: 'accepted' } : s)
+      );
+      // Reload resume data
+      if (resumeId) {
+        const { data } = await axios.get(`${API}/resumes/${resumeId}`);
+        setForm(data);
+      }
+    } catch (e) {
+      console.error("Failed to accept suggestion:", e);
+      alert("Failed to accept suggestion. Please try again.");
+    }
+  };
+
+  const rejectSuggestion = async (suggestionId) => {
+    try {
+      await axios.post(`${API}/suggestions/${suggestionId}/reject`);
+      setSuggestions(prev => 
+        prev.map(s => s.id === suggestionId ? { ...s, status: 'rejected' } : s)
+      );
+    } catch (e) {
+      console.error("Failed to reject suggestion:", e);
+      alert("Failed to reject suggestion. Please try again.");
+    }
+  };
+
+  // Template category icons
+  const getTemplateIcon = (category) => {
+    switch (category) {
+      case 'professional': return <Crown className="h-4 w-4" />;
+      case 'modern': return <Zap className="h-4 w-4" />;
+      case 'executive': return <Crown className="h-4 w-4" />;
+      case 'technical': return <Code className="h-4 w-4" />;
+      case 'creative': return <Brush className="h-4 w-4" />;
+      default: return <LayoutTemplate className="h-4 w-4" />;
+    }
+  };
+
+  const resumePlainText = () => {
+    try {
+      const expText = (form.experience || []).map(e => [e.company, e.title, e.city, (e.bullets||[]).join(" ")].join(" ")).join(" ");
+      const projText = (form.projects || []).map(p => [p.name, p.description, (p.tech||[]).join(" ")].join(" ")).join(" ");
+      return [form.summary || "", (form.skills||[]).join(" "), expText, projText].join(" ");
+    } catch { return form.summary || ""; }
+  };
+
+  const rewriteBullet = async (i, bi) => {
+    const k = keyFor(i, bi);
+    setRewriting(k);
+    try {
+      const exp = form.experience[i];
+      const bullet = (exp?.bullets || [])[bi] || "";
+      const jd_context = jdText || (jdKeywords || []).join(", ");
+      const payload = { role_title: exp?.title || "", bullets: [bullet], jd_context, tone: "impactful" };
+      const { data } = await axios.post(`${API}/ai/rewrite-bullets`, payload);
+      const improved = (data?.improved_bullets || [])[0];
+      if (improved) {
+        const copy = [...form.experience];
+        copy[i].bullets[bi] = improved;
+        setForm({ ...form, experience: copy });
+      }
+    } catch (e) { console.error(e); }
+    finally { setRewriting(""); }
+  };
+
+  const lintSummaryAI = async () => {
+    if (!form.summary?.trim()) return;
+    setLintSummary((p) => ({ ...p, loading: true, issues: [], suggestions: [] }));
+    try {
+      const { data } = await axios.post(`${API}/ai/lint`, { text: form.summary, section: "summary" });
+      setLintSummary({ loading: false, issues: data?.issues || [], suggestions: data?.suggestions || [] });
+    } catch (e) { console.error(e); setLintSummary({ loading: false, issues: [], suggestions: [] }); }
+  };
+
+  const lintBulletAI = async (i, bi) => {
+    const k = keyFor(i, bi);
+    setBulletLint((prev) => ({ ...prev, [k]: { ...(prev[k]||{}), loading: true } }));
+    try {
+      const exp = form.experience[i];
+      const bullet = (exp?.bullets || [])[bi] || "";
+      const { data } = await axios.post(`${API}/ai/lint`, { text: bullet, section: "bullet" });
+      setBulletLint((prev) => ({ ...prev, [k]: { loading: false, issues: data?.issues || [], suggestions: data?.suggestions || [] } }));
+    } catch (e) {
+      console.error(e);
+      setBulletLint((prev) => ({ ...prev, [k]: { loading: false, issues: [], suggestions: [] } }));
+    }
+  };
+
+  const suggestSynonyms = async () => {
+    if (!jdKeywords.length) return;
+    setSynLoading(true);
+    try {
+      const { data } = await axios.post(`${API}/ai/suggest-keywords`, { jd_keywords: jdKeywords, resume_text: resumePlainText() });
+      setSynonymsData({ synonyms: data?.synonyms || {}, prioritize: data?.prioritize || [] });
+    } catch (e) { console.error(e); }
+    finally { setSynLoading(false); }
+  };
+
+  const addSkill = (s) => {
+    if (!s) return;
+    if ((form.skills||[]).includes(s)) return;
+    handleChange("skills", [...(form.skills||[]), s]);
+  };
+
+  const handleFileImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert("Only PDF files are supported");
+      return;
+    }
+
+    setImporting(true);
+    setImportResult(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const { data } = await axios.post(`${API}/import/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setImportResult(data);
+      if (data.success && data.extracted_data) {
+        setShowImportModal(true);
+      }
+    } catch (e) {
+      console.error(e);
+      setImportResult({
+        success: false,
+        message: e.response?.data?.detail || "Import failed",
+        warnings: ["Please check your file format and try again"]
+      });
+      setShowImportModal(true);
+    } finally {
+      setImporting(false);
+      // Clear file input
+      event.target.value = '';
+    }
+  };
+
+  const applyImportedData = () => {
+    if (importResult?.extracted_data) {
+      setForm(importResult.extracted_data);
+      setShowImportModal(false);
+      setImportResult(null);
+      // Auto-save the imported resume
+      setTimeout(() => saveResume(), 500);
+    }
+  };
+
+  const exportPDF = async () => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API}/export/pdf/${resumeId}`);
+      if (!response.ok) throw new Error("Export failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resume_${form.contact.full_name || 'AtlasCV'}_${form.locale}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error(e);
+      alert("PDF export failed. Please try again.");
+    }
+  };
+
+  const exportJSON = async () => {
+    if (!resumeId) {
+      alert("Please save your resume first");
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API}/export/json/${resumeId}`);
+      if (!response.ok) throw new Error("Export failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resume_${form.contact.full_name || 'AtlasCV'}_${form.locale}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error(e);
+      alert("JSON export failed. Please try again.");
+    }
+  };
+
 
   const handleChange = (path, value) => {
     setForm((prev) => {
@@ -72,6 +436,9 @@ function Home() {
         const map = {};
         (pre.data.presets || []).forEach((p) => { map[p.code] = p; });
         setPresets(map);
+        
+        // Load templates for Phase 6
+        await loadTemplates();
       } catch(e) { console.error(e); }
     };
     boot();
@@ -128,7 +495,7 @@ function Home() {
 
   useEffect(() => { if (jdKeywords.length) { checkCoverage(); } }, [jdKeywords, form]);
 
-  const preset = presets[form.locale] || { date_format: "YYYY-MM", section_order: ["profile","jd","summary","skills","experience","projects","education"], labels: {} };
+  const preset = presets[form.locale] || { date_format: "YYYY-MM", section_order: ["profile","jd","templates","summary","skills","experience","projects","education"], labels: {} };
 
   const scoreColor = useMemo(() => ats.score >= 80 ? "text-emerald-600" : ats.score >= 60 ? "text-amber-600" : "text-rose-600", [ats.score]);
 
@@ -218,12 +585,42 @@ function Home() {
           </div>
           {jdKeywords.length > 0 && (
             <div className="text-sm">
-              <div className="mb-1">Keywords ({jdKeywords.length}):</div>
+              <div className="mb-1 flex items-center gap-2">
+                <span>Keywords ({jdKeywords.length}):</span>
+                <Button size="sm" variant="outline" onClick={suggestSynonyms} disabled={synLoading}>{synLoading ? "Loading..." : "Suggest synonyms"}</Button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {jdKeywords.map((k, i) => (
                   <span key={i} className="rounded-full border px-2 py-1 text-xs">{k}</span>
                 ))}
               </div>
+              {Object.keys(synonymsData.synonyms || {}).length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs label-sub mb-1">Synonyms (click to add to skills)</div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(synonymsData.synonyms).map(([kw, syns]) => (
+                      <div key={kw} className="border rounded-md px-2 py-1">
+                        <div className="text-[11px] font-medium">{kw}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {syns.map((s, si) => (
+                            <button key={si} className="rounded-full bg-slate-50 hover:bg-slate-100 border px-2 py-0.5 text-[11px]" onClick={() => addSkill(s)}>{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {synonymsData.prioritize?.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs label-sub mb-1">Prioritize</div>
+                  <div className="flex flex-wrap gap-2">
+                    {synonymsData.prioritize.map((s, i) => (
+                      <span key={i} className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 text-[11px]">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {coverage && (
@@ -252,13 +649,187 @@ function Home() {
         </CardContent>
       </Card>
     ),
+    templates: (
+      <Card className="section card-hover" key="templates">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 h-heading">
+            <LayoutTemplate className="h-5 w-5" /> Template Gallery
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Choose from our ATS-optimized templates designed for different industries and roles.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.slice(0, 3).map((template) => (
+                <div
+                  key={template.id}
+                  className={`border rounded-lg p-3 cursor-pointer transition-all hover:border-blue-300 hover:shadow-sm ${
+                    selectedTemplate === template.id ? 'border-blue-500 bg-blue-50' : ''
+                  }`}
+                  onClick={() => setSelectedTemplate(template.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select ${template.name} template`}
+                  onKeyDown={(e) => e.key === 'Enter' && setSelectedTemplate(template.id)}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    {getTemplateIcon(template.category)}
+                    <span className="font-medium text-sm">{template.name}</span>
+                    {template.ats_optimized && (
+                      <Badge variant="secondary" className="text-xs">ATS</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600">{template.description}</p>
+                  <div className="mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {template.category}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline"
+                    aria-describedby="template-help"
+                  >
+                    Browse All Templates
+                  </Button>
+                </DialogTrigger>
+                <div id="template-help" className="sr-only">
+                  Open template gallery to choose from 5 professional, ATS-optimized resume templates
+                </div>
+                <DialogContent className="max-w-4xl max-h-[80vh]" role="dialog" aria-labelledby="template-dialog-title">
+                  <DialogHeader>
+                    <DialogTitle id="template-dialog-title">Choose Template</DialogTitle>
+                    <DialogDescription>
+                      Select a professional, ATS-optimized template for your resume. Templates improve readability and pass through applicant tracking systems.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="h-96" aria-label="Template options">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                      {templates.map((template) => (
+                        <div
+                          key={template.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-blue-300 hover:shadow-md ${
+                            selectedTemplate === template.id ? 'border-blue-500 bg-blue-50' : ''
+                          }`}
+                          onClick={() => setSelectedTemplate(template.id)}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={selectedTemplate === template.id}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedTemplate(template.id);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            {getTemplateIcon(template.category)}
+                            <span className="font-semibold">{template.name}</span>
+                            {template.ats_optimized && (
+                              <Badge variant="secondary">
+                                <BadgeCheck className="h-3 w-3 mr-1" aria-hidden="true" />
+                                ATS Safe
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600 mb-3">{template.description}</p>
+                          <div className="flex gap-2">
+                            <Badge variant="outline">{template.category}</Badge>
+                          </div>
+                          <div className="mt-3 text-xs text-slate-500">
+                            Font: {template.styling.font_family.split(',')[0]} • 
+                            Size: {template.styling.font_size}pt
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowTemplateDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
+                      disabled={!selectedTemplate || applyingTemplate}
+                      aria-describedby="apply-template-help"
+                    >
+                      {applyingTemplate ? "Applying..." : "Apply Template"}
+                    </Button>
+                    <div id="apply-template-help" className="sr-only">
+                      Apply the selected template styling to your resume
+                    </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              {selectedTemplate && (
+                <Button 
+                  onClick={() => applyTemplate(selectedTemplate)}
+                  disabled={applyingTemplate || !resumeId}
+                >
+                  {applyingTemplate ? "Applying..." : "Apply Selected"}
+                </Button>
+              )}
+            </div>
+            
+            {!resumeId && (
+              <p className="text-xs text-slate-500">Save your resume first to apply templates</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    ),
     summary: (
       <Card className="section card-hover" key="summary">
         <CardHeader>
           <CardTitle className="h-heading">{presets[form.locale]?.labels?.summary || 'Professional Summary'}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea className="mt-1" rows={5} value={form.summary} onChange={(e) => handleChange("summary", e.target.value)} placeholder="2–3 lines capturing scope, years, domains, and top skills relevant to the role." />
+          <Textarea 
+            className="mt-1" 
+            rows={5} 
+            value={form.summary} 
+            onChange={(e) => handleChange("summary", e.target.value)} 
+            placeholder="2–3 lines capturing scope, years, domains, and top skills relevant to the role."
+            aria-describedby="summary-help"
+            aria-label="Professional summary"
+          />
+          <div id="summary-help" className="sr-only">Write a brief professional summary highlighting your experience, skills, and career focus. This appears at the top of your resume.</div>
+          <div className="mt-2 flex items-center gap-2">
+            <Button variant="outline" onClick={lintSummaryAI} disabled={!form.summary?.trim() || lintSummary.loading}>
+              {lintSummary.loading ? "Linting..." : "Lint with AI"}
+            </Button>
+          </div>
+          {lintSummary.issues?.length > 0 && (
+            <div className="mt-2 text-xs text-slate-700">
+              <div className="font-medium">Issues</div>
+              <ul className="list-disc pl-5">
+                {lintSummary.issues.map((i, idx) => (
+                  <li key={idx}><span className="font-semibold">{i.type}:</span> {i.message} {i.suggestion ? `– ${i.suggestion}` : ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {lintSummary.suggestions?.length > 0 && (
+            <div className="mt-2 text-xs text-slate-700">
+              <div className="font-medium">Suggestions</div>
+              <ul className="list-disc pl-5">
+                {lintSummary.suggestions.map((s, idx) => (<li key={idx}>{s}</li>))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     ),
@@ -268,7 +839,14 @@ function Home() {
           <CardTitle className="h-heading">Skills</CardTitle>
         </CardHeader>
         <CardContent>
-          <Input placeholder="Comma-separated skills (e.g., React, Node, AWS)" value={form.skills.join(", ")} onChange={(e) => handleChange("skills", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} />
+          <Input 
+            placeholder="Comma-separated skills (e.g., React, Node, AWS)" 
+            value={form.skills.join(", ")} 
+            onChange={(e) => handleChange("skills", e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
+            aria-describedby="skills-help"
+            aria-label="Professional skills"
+          />
+          <div id="skills-help" className="sr-only">List your professional skills separated by commas. Include both technical and soft skills relevant to your target role.</div>
           <p className="text-xs label-sub mt-2">Aim for 8–12 concise, role-aligned skills.</p>
         </CardContent>
       </Card>
@@ -296,9 +874,26 @@ function Home() {
               <div className="mt-3">
                 <Label>Bullets</Label>
                 {exp.bullets.map((b, bi) => (
-                  <Input key={bi} className="mt-2" value={b} onChange={(e) => {
-                    const copy = [...form.experience]; copy[idx].bullets[bi] = e.target.value; setForm({ ...form, experience: copy });
-                  }} placeholder="Impact-oriented bullet" />
+                  <div key={bi} className="mt-2 flex flex-col gap-1">
+                    <div className="flex gap-2">
+                      <Input value={b} onChange={(e) => {
+                        const copy = [...form.experience]; copy[idx].bullets[bi] = e.target.value; setForm({ ...form, experience: copy });
+                      }} placeholder="Impact-oriented bullet" />
+                      <Button variant="outline" onClick={() => rewriteBullet(idx, bi)} disabled={rewriting === keyFor(idx, bi)}>
+                        {rewriting === keyFor(idx, bi) ? "Rewriting..." : "Rewrite with AI"}
+                      </Button>
+                      <Button variant="ghost" onClick={() => lintBulletAI(idx, bi)} disabled={bulletLint[keyFor(idx, bi)]?.loading}>Lint</Button>
+                    </div>
+                    {bulletLint[keyFor(idx, bi)]?.issues?.length > 0 && (
+                      <div className="text-[11px] text-slate-700">
+                        <ul className="list-disc pl-5">
+                          {bulletLint[keyFor(idx, bi)].issues.map((ii, j) => (
+                            <li key={j}><span className="font-semibold">{ii.type}:</span> {ii.message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 <div className="mt-2 flex gap-2">
                   <Button variant="outline" onClick={() => { const copy = [...form.experience]; copy[idx].bullets.push(""); setForm({ ...form, experience: copy }); }}>Add bullet</Button>
@@ -360,52 +955,71 @@ function Home() {
     ),
   };
 
-  const leftOrder = preset.section_order || ["profile","jd","summary","skills","experience","projects","education"];
+  const leftOrder = preset.section_order || ["profile","jd","templates","summary","skills","experience","projects","education"];
 
   return (
     <div className="min-h-screen atlas-gradient">
-      <header className="sticky top-0 z-30 border-b header-blur bg-white/70">
+      <header className="sticky top-0 z-30 border-b header-blur bg-white/70" role="banner">
         <div className="container-xl flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="AtlasCV" className="brand-logo" />
-            <span className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</span>
-            <span className="text-sm" style={{color:"#16A34A"}}>ATS-Optimized Resume Builder</span>
+            <img src={LOGO_URL} alt="AtlasCV Logo - ATS-optimized resume builder" className="brand-logo" />
+            <h1 className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</h1>
+            <span className="text-sm" style={{color:"#16A34A"}} role="img" aria-label="Product description">ATS-Optimized Resume Builder</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button className="btn-cta" onClick={validateLocale} variant="outline">
-              <ShieldCheck className="h-4 w-4" /> Validate preset
-            </Button>
-            <Button className="btn-cta" onClick={saveResume} disabled={saving}>
-              <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
-            </Button>
-          </div>
+          <nav role="navigation" aria-label="Main navigation">
+            <div className="flex items-center gap-2">
+              <Button 
+                className="btn-cta" 
+                onClick={validateLocale} 
+                variant="outline"
+                aria-describedby="validate-help"
+              >
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" /> 
+                Validate preset
+              </Button>
+              <div id="validate-help" className="sr-only">Validate resume according to selected locale preset rules</div>
+              <Button 
+                className="btn-cta" 
+                onClick={saveResume} 
+                disabled={saving}
+                aria-describedby="save-help"
+              >
+                <Save className="h-4 w-4" aria-hidden="true" /> 
+                {saving ? "Saving..." : "Save Draft"}
+              </Button>
+              <div id="save-help" className="sr-only">Save current resume draft to continue editing later</div>
+            </div>
+          </nav>
         </div>
       </header>
 
-      <main className="container-xl grid grid-cols-12 gap-6 py-6">
+      <main className="container-xl grid grid-cols-12 gap-6 py-6" id="main-content" ref={mainContentRef} tabIndex={-1} role="main">
         <div className="col-span-12 lg:col-span-7 space-y-6">
           {leftOrder.map((key) => Sections[key]).filter(Boolean)}
         </div>
 
         {/* Right column: ATS & Preset info */}
-        <div className="col-span-12 lg:col-span-5 space-y-6">
+        <div className="col-span-12 lg:col-span-5 space-y-6" role="complementary" aria-label="Resume tools and information">
           <Card className="section card-hover">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 h-heading"><BadgeCheck className="h-5 w-5 text-slate-700" /> Live ATS Heuristic</CardTitle>
+              <CardTitle className="flex items-center gap-2 h-heading">
+                <BadgeCheck className="h-5 w-5 text-slate-700" aria-hidden="true" /> 
+                Live ATS Heuristic
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-semibold">
-                Score: <span className={scoreColor}>{ats.score}</span>/100
+              <div className="text-3xl font-semibold" role="status" aria-live="polite" aria-atomic="true">
+                Score: <span className={scoreColor} aria-label={`ATS score ${ats.score} out of 100`}>{ats.score}</span>/100
               </div>
-              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600">
-                {ats.hints.map((h, i) => (<li key={i}>{h}</li>))}
-                {ats.hints.length === 0 ? <li>Looks solid. Keep quantifying impact.</li> : null}
+              <ul className="mt-3 list-disc pl-5 text-sm text-slate-600" role="list" aria-label="ATS improvement hints">
+                {ats.hints.map((h, i) => (<li key={i} role="listitem">{h}</li>))}
+                {ats.hints.length === 0 ? <li role="listitem">Looks solid. Keep quantifying impact.</li> : null}
               </ul>
               {validation?.issues?.length > 0 && (
-                <div className="mt-4">
+                <div className="mt-4" role="region" aria-label="Locale validation issues">
                   <div className="font-medium h-heading">Locale Validation</div>
-                  <ul className="list-disc pl-5 text-sm text-slate-600 mt-1">
-                    {validation.issues.map((x, i) => (<li key={i}>{x}</li>))}
+                  <ul className="list-disc pl-5 text-sm text-slate-600 mt-1" role="list">
+                    {validation.issues.map((x, i) => (<li key={i} role="listitem">{x}</li>))}
                   </ul>
                 </div>
               )}
@@ -434,19 +1048,692 @@ function Home() {
 
           <Card className="section card-hover">
             <CardHeader>
-              <CardTitle className="h-heading">Import/Export (coming soon)</CardTitle>
+              <CardTitle className="h-heading">Import/Export</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
-              <Button variant="outline"><UploadCloud className="h-4 w-4" />Import</Button>
-              <Button variant="outline"><FileText className="h-4 w-4" />Export</Button>
+            <CardContent>
+              <div className="space-y-3">
+                {/* Import Section */}
+                <div>
+                  <Label>Import Resume (PDF)</Label>
+                  <div className="mt-2">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileImport}
+                      disabled={importing}
+                      className="hidden"
+                      id="file-import"
+                    />
+                    <label
+                      htmlFor="file-import"
+                      className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer ${importing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      {importing ? "Importing..." : "Import PDF"}
+                    </label>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Max 5MB, PDF format only</p>
+                </div>
+
+                {/* Export Section */}
+                <div>
+                  <Label>Export Resume</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <Button variant="outline" onClick={exportPDF} disabled={!resumeId}>
+                      <FileText className="h-4 w-4" />PDF
+                    </Button>
+                    <Button variant="outline" onClick={exportJSON} disabled={!resumeId}>
+                      <FileText className="h-4 w-4" />JSON
+                    </Button>
+                  </div>
+                  {!resumeId && (
+                    <p className="text-xs text-slate-500 mt-1">Save resume first to export</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="section card-hover">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h-heading">
+                <Share2 className="h-5 w-5" /> Collaboration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {/* Share Section */}
+                <div>
+                  <Label>Share Resume</Label>
+                  <div className="space-y-2 mt-2">
+                    <Select value={sharePermissions} onValueChange={setSharePermissions}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="view">View Only</SelectItem>
+                        <SelectItem value="comment">Can Comment</SelectItem>
+                        <SelectItem value="suggest">Can Suggest Changes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="outline" 
+                      onClick={createShareLink}
+                      disabled={!resumeId}
+                      className="w-full"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Generate Share Link
+                    </Button>
+                    {shareLink && (
+                      <div className="text-xs bg-green-50 p-2 rounded border">
+                        <p className="font-medium">Link created!</p>
+                        <p className="mt-1 font-mono text-green-700 break-all">
+                          {window.location.origin}/share/{shareLink.share_token}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Comments & Suggestions */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label>Activity</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadCollaborationData}
+                      disabled={!resumeId}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {resumeId && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2 text-sm">
+                        <Badge variant="outline">{comments.length} Comments</Badge>
+                        <Badge variant="outline">{suggestions.filter(s => s.status === 'pending').length} Suggestions</Badge>
+                      </div>
+                      
+                      <Tabs defaultValue="comments" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="comments">Comments</TabsTrigger>
+                          <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="comments" className="space-y-2">
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {comments.slice(0, 3).map((comment) => (
+                              <div key={comment.id} className="text-xs bg-slate-50 p-2 rounded">
+                                <div className="font-medium">{comment.author_name}</div>
+                                <div className="text-slate-600">{comment.content}</div>
+                                <div className="text-slate-400 mt-1">{comment.section}</div>
+                              </div>
+                            ))}
+                            {comments.length === 0 && (
+                              <p className="text-xs text-slate-500">No comments yet</p>
+                            )}
+                          </div>
+                          
+                            <div className="space-y-2">
+                              <Select value={commentSection} onValueChange={setCommentSection}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select section to comment on" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="summary">Summary</SelectItem>
+                                  <SelectItem value="skills">Skills</SelectItem>
+                                  <SelectItem value="experience">Experience</SelectItem>
+                                  <SelectItem value="education">Education</SelectItem>
+                                  <SelectItem value="projects">Projects</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-1">
+                                <Input
+                                  placeholder="Add comment..."
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  className="text-xs"
+                                  aria-label="Comment text"
+                                />
+                                <Button 
+                                  size="sm" 
+                                  onClick={addComment} 
+                                  disabled={!newComment.trim() || !commentSection}
+                                  aria-label="Add comment to selected section"
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                            </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="suggestions" className="space-y-2">
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {suggestions.filter(s => s.status === 'pending').slice(0, 3).map((suggestion) => (
+                              <div key={suggestion.id} className="text-xs bg-amber-50 p-2 rounded border border-amber-200">
+                                <div className="font-medium">{suggestion.author_name}</div>
+                                <div className="text-slate-600">{suggestion.reason}</div>
+                                <div className="mt-1 flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={() => acceptSuggestion(suggestion.id)}
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={() => rejectSuggestion(suggestion.id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                            {suggestions.filter(s => s.status === 'pending').length === 0 && (
+                              <p className="text-xs text-slate-500">No pending suggestions</p>
+                            )}
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  )}
+                  
+                  {!resumeId && (
+                    <p className="text-xs text-slate-500">Save resume to enable collaboration</p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
       </main>
 
+      {/* Skip Link for Accessibility */}
+      <a
+        ref={skipLinkRef}
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-blue-600 focus:text-white focus:px-3 focus:py-2 focus:rounded"
+      >
+        Skip to main content
+      </a>
+
       <footer className="border-t bg-white/70">
-        <div className="container-xl py-6 text-sm text-slate-600">© {new Date().getFullYear()} AtlasCV. ATS-safe builder.</div>
+        <div className="container-xl py-6 text-sm text-slate-600" role="contentinfo">
+          © {new Date().getFullYear()} AtlasCV. ATS-safe builder.
+          <div className="mt-2 text-xs">
+            <span className="mr-4">Keyboard accessible</span>
+            <span>WCAG 2.1 AA compliant</span>
+          </div>
+        </div>
       </footer>
+
+      {/* Import Result Modal */}
+      {showImportModal && importResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                {importResult.success ? "Import Successful" : "Import Failed"}
+              </h2>
+              <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className={importResult.success ? "text-green-700" : "text-red-700"}>
+                {importResult.message}
+              </p>
+              
+              {importResult.warnings?.length > 0 && (
+                <div>
+                  <h3 className="font-medium text-amber-700 mb-2">Warnings:</h3>
+                  <ul className="list-disc pl-5 text-amber-600 text-sm space-y-1">
+                    {importResult.warnings.map((warning, i) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {importResult.success && importResult.extracted_data && (
+                <div>
+                  <h3 className="font-medium mb-2">Extracted Information:</h3>
+                  <div className="text-sm space-y-2 bg-slate-50 p-3 rounded">
+                    <p><strong>Name:</strong> {importResult.extracted_data.contact?.full_name || "Not detected"}</p>
+                    <p><strong>Email:</strong> {importResult.extracted_data.contact?.email || "Not detected"}</p>
+                    <p><strong>Phone:</strong> {importResult.extracted_data.contact?.phone || "Not detected"}</p>
+                    <p><strong>Skills:</strong> {importResult.extracted_data.skills?.length || 0} detected</p>
+                    <p><strong>Experience:</strong> {importResult.extracted_data.experience?.length || 0} entries</p>
+                    <p><strong>Education:</strong> {importResult.extracted_data.education?.length || 0} entries</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <Button onClick={() => setShowImportModal(false)} variant="outline">
+                Cancel
+              </Button>
+              {importResult.success && (
+                <Button onClick={applyImportedData} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Apply Imported Data
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// SharedResume component for viewing shared resumes
+function SharedResume() {
+  const { token } = useParams();
+  const [sharedData, setSharedData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentSection, setCommentSection] = useState("");
+  const [newSuggestion, setNewSuggestion] = useState({
+    section: "",
+    field: "",
+    original_value: "",
+    suggested_value: "",
+    reason: ""
+  });
+
+  useEffect(() => {
+    loadSharedResume();
+  }, [token]);
+
+  const loadSharedResume = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(`${API}/share/${token}`);
+      setSharedData(data);
+      
+      // Load comments and suggestions if user has permissions
+      if (data.share_info.can_comment) {
+        const [commentsRes, suggestionsRes] = await Promise.all([
+          axios.get(`${API}/comments/${data.resume.id}`),
+          axios.get(`${API}/suggestions/${data.resume.id}`)
+        ]);
+        setComments(commentsRes.data.comments || []);
+        setSuggestions(suggestionsRes.data.suggestions || []);
+      }
+    } catch (e) {
+      console.error("Failed to load shared resume:", e);
+      setError(e.response?.status === 404 ? "Shared resume not found or expired" : "Failed to load shared resume");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addComment = async () => {
+    if (!newComment.trim() || !commentSection) return;
+    
+    try {
+      const { data } = await axios.post(`${API}/comments`, {
+        resume_id: sharedData.resume.id,
+        section: commentSection,
+        content: newComment,
+        author_name: prompt("Enter your name:") || "Anonymous"
+      });
+      setComments(prev => [...prev, data]);
+      setNewComment("");
+      setCommentSection("");
+    } catch (e) {
+      console.error("Failed to add comment:", e);
+      alert("Failed to add comment. Please try again.");
+    }
+  };
+
+  const addSuggestion = async () => {
+    if (!newSuggestion.section || !newSuggestion.suggested_value || !newSuggestion.reason) return;
+    
+    try {
+      const { data } = await axios.post(`${API}/suggestions`, {
+        resume_id: sharedData.resume.id,
+        section: newSuggestion.section,
+        field: newSuggestion.field,
+        original_value: newSuggestion.original_value,
+        suggested_value: newSuggestion.suggested_value,
+        reason: newSuggestion.reason,
+        author_name: prompt("Enter your name:") || "Anonymous"
+      });
+      setSuggestions(prev => [...prev, data]);
+      setNewSuggestion({
+        section: "",
+        field: "",
+        original_value: "",
+        suggested_value: "",
+        reason: ""
+      });
+    } catch (e) {
+      console.error("Failed to add suggestion:", e);
+      alert("Failed to add suggestion. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading shared resume...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{error}</p>
+            <Button className="mt-4" onClick={() => window.location.href = "/"}>
+              Go to AtlasCV Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const resume = sharedData.resume;
+  const shareInfo = sharedData.share_info;
+
+  return (
+    <div className="min-h-screen atlas-gradient">
+      <header className="sticky top-0 z-30 border-b header-blur bg-white/70">
+        <div className="container-xl flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            <img src={LOGO_URL} alt="AtlasCV" className="brand-logo" />
+            <span className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</span>
+            <span className="text-sm" style={{color:"#16A34A"}}>Shared Resume</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">
+              {shareInfo.permissions === 'view' ? 'View Only' : 
+               shareInfo.permissions === 'comment' ? 'Can Comment' : 'Can Suggest'}
+            </Badge>
+            <Button variant="outline" onClick={() => window.location.href = "/"}>
+              Create Your Resume
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container-xl py-6">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Resume Content */}
+          <div className="col-span-12 lg:col-span-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {resume.contact?.full_name || "Resume"}
+                  <span className="ml-2 text-sm font-normal text-slate-500">
+                    ({resume.locale})
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Contact */}
+                {resume.contact && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Contact</h3>
+                    <div className="text-sm space-y-1">
+                      <p>{resume.contact.full_name}</p>
+                      <p>{resume.contact.email}</p>
+                      <p>{resume.contact.phone}</p>
+                      <p>{[resume.contact.city, resume.contact.state, resume.contact.country].filter(Boolean).join(", ")}</p>
+                      {resume.contact.linkedin && <p>LinkedIn: {resume.contact.linkedin}</p>}
+                      {resume.contact.website && <p>Website: {resume.contact.website}</p>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                {resume.summary && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Summary</h3>
+                    <p className="text-sm">{resume.summary}</p>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {resume.skills?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Skills</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {resume.skills.map((skill, i) => (
+                        <Badge key={i} variant="secondary">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience */}
+                {resume.experience?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Experience</h3>
+                    <div className="space-y-4">
+                      {resume.experience.map((exp, i) => (
+                        <div key={i} className="border-l-2 border-blue-200 pl-4">
+                          <h4 className="font-medium">{exp.title} at {exp.company}</h4>
+                          <p className="text-sm text-slate-600">{exp.city} • {exp.start_date} - {exp.end_date || "Present"}</p>
+                          {exp.bullets?.length > 0 && (
+                            <ul className="mt-2 list-disc list-inside text-sm">
+                              {exp.bullets.map((bullet, bi) => (
+                                <li key={bi}>{bullet}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Education */}
+                {resume.education?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Education</h3>
+                    <div className="space-y-2">
+                      {resume.education.map((ed, i) => (
+                        <div key={i}>
+                          <h4 className="font-medium">{ed.degree} - {ed.institution}</h4>
+                          <p className="text-sm text-slate-600">{ed.start_date} - {ed.end_date || "Present"}</p>
+                          {ed.details && <p className="text-sm mt-1">{ed.details}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Projects */}
+                {resume.projects?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Projects</h3>
+                    <div className="space-y-3">
+                      {resume.projects.map((proj, i) => (
+                        <div key={i}>
+                          <h4 className="font-medium">{proj.name}</h4>
+                          {proj.tech?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {proj.tech.map((tech, ti) => (
+                                <Badge key={ti} variant="outline" className="text-xs">{tech}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-sm mt-1">{proj.description}</p>
+                          {proj.link && <p className="text-sm text-blue-600">{proj.link}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Collaboration Panel */}
+          <div className="col-span-12 lg:col-span-4 space-y-4">
+            {shareInfo.can_comment && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    Comments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="bg-slate-50 p-2 rounded text-sm">
+                          <div className="font-medium">{comment.author_name}</div>
+                          <div className="text-slate-600">{comment.content}</div>
+                          <div className="text-slate-400 text-xs mt-1">Section: {comment.section}</div>
+                        </div>
+                      ))}
+                      {comments.length === 0 && (
+                        <p className="text-sm text-slate-500">No comments yet</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Select value={commentSection} onValueChange={setCommentSection}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select section" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="summary">Summary</SelectItem>
+                          <SelectItem value="skills">Skills</SelectItem>
+                          <SelectItem value="experience">Experience</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="projects">Projects</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Textarea
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        rows={3}
+                      />
+                      <Button onClick={addComment} disabled={!newComment.trim() || !commentSection}>
+                        Add Comment
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {shareInfo.can_suggest && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Edit className="h-5 w-5" />
+                    Suggestions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {suggestions.map((suggestion) => (
+                        <div key={suggestion.id} className="bg-amber-50 p-2 rounded text-sm border border-amber-200">
+                          <div className="font-medium">{suggestion.author_name}</div>
+                          <div className="text-slate-600">{suggestion.reason}</div>
+                          <div className="text-xs mt-1">
+                            <span className="font-medium">Section:</span> {suggestion.section}
+                            {suggestion.field && <> • <span className="font-medium">Field:</span> {suggestion.field}</>}
+                          </div>
+                          <div className="mt-1 bg-white p-1 rounded text-xs">
+                            <div><span className="font-medium">Suggested:</span> {suggestion.suggested_value}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {suggestions.length === 0 && (
+                        <p className="text-sm text-slate-500">No suggestions yet</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Select value={newSuggestion.section} onValueChange={(value) => setNewSuggestion(prev => ({ ...prev, section: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select section" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="summary">Summary</SelectItem>
+                          <SelectItem value="skills">Skills</SelectItem>
+                          <SelectItem value="experience">Experience</SelectItem>
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="projects">Projects</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="Field (optional)"
+                        value={newSuggestion.field}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, field: e.target.value }))}
+                      />
+                      <Input
+                        placeholder="Current value"
+                        value={newSuggestion.original_value}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, original_value: e.target.value }))}
+                      />
+                      <Input
+                        placeholder="Suggested value"
+                        value={newSuggestion.suggested_value}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, suggested_value: e.target.value }))}
+                      />
+                      <Textarea
+                        placeholder="Reason for suggestion..."
+                        value={newSuggestion.reason}
+                        onChange={(e) => setNewSuggestion(prev => ({ ...prev, reason: e.target.value }))}
+                        rows={3}
+                      />
+                      <Button 
+                        onClick={addSuggestion} 
+                        disabled={!newSuggestion.section || !newSuggestion.suggested_value || !newSuggestion.reason}
+                      >
+                        Add Suggestion
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!shareInfo.can_comment && !shareInfo.can_suggest && (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Eye className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                  <p className="text-sm text-slate-600">View-only access</p>
+                  <p className="text-xs text-slate-500 mt-1">You can view this resume but cannot comment or suggest changes</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
@@ -456,9 +1743,8 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          <Route path="/" element={<Home />} />
+          <Route path="/share/:token" element={<SharedResume />} />
         </Routes>
       </BrowserRouter>
     </div>
