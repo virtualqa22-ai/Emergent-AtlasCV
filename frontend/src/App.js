@@ -552,7 +552,7 @@ function Home() {
 
         <div className={`grid gap-6 ${
           previewMode === 'split' 
-            ? 'lg:grid-cols-12' 
+            ? 'lg:grid-cols-2' 
             : previewMode === 'edit'
               ? 'grid-cols-1'
               : 'grid-cols-1'
