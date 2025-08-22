@@ -99,6 +99,17 @@ function Home() {
   const [showPreview, setShowPreview] = useState(true);
   const [previewMode, setPreviewMode] = useState('split'); // 'split', 'preview', 'edit'
   
+  // Phase 9: Optional Fields State
+  const [optionalFieldsConfig, setOptionalFieldsConfig] = useState({});
+  const [visibleOptionalFields, setVisibleOptionalFields] = useState({
+    photo: false,
+    date_of_birth: false,
+    certifications: false,
+    references: false,
+    personal_details: false,
+    hobbies: false
+  });
+  
   // Debounce form updates for smooth preview
   const debouncedForm = useDebounce(form, 300);
 
