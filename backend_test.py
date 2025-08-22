@@ -878,6 +878,640 @@ class AtlasCVAPITester:
         
         return integration_success
 
+    # Phase 6 Template System Tests
+    def test_get_templates(self):
+        """Test GET /api/templates - should return 5 built-in templates"""
+        success, response = self.run_test(
+            "Get Templates",
+            "GET",
+            "templates",
+            200
+        )
+        
+        if success:
+            # Check if templates key exists
+            if "templates" not in response:
+                print("   ❌ Missing 'templates' key in response")
+                return False
+            
+            templates = response.get("templates", [])
+            
+            # Should have exactly 5 built-in templates
+            if len(templates) != 5:
+                print(f"   ❌ Expected 5 templates, got {len(templates)}")
+                return False
+            
+            print(f"   ✅ Found {len(templates)} templates as expected")
+            
+            # Check template structure
+            expected_template_ids = {
+                "classic-professional", "modern-minimal", "executive-formal", 
+                "technical-focused", "creative-balanced"
+            }
+            actual_template_ids = {t.get("id") for t in templates}
+            
+            if expected_template_ids != actual_template_ids:
+                missing = expected_template_ids - actual_template_ids
+                extra = actual_template_ids - expected_template_ids
+                if missing:
+                    print(f"   ❌ Missing template IDs: {missing}")
+                if extra:
+                    print(f"   ❌ Unexpected template IDs: {extra}")
+                return False
+            
+            print(f"   ✅ All expected template IDs found: {sorted(actual_template_ids)}")
+            
+            # Check each template has required fields
+            required_fields = ["id", "name", "description", "category", "ats_optimized", "layout_config", "styling"]
+            for template in templates:
+                template_id = template.get("id")
+                for field in required_fields:
+                    if field not in template:
+                        print(f"   ❌ Template {template_id} missing field: {field}")
+                        return False
+            
+            print("   ✅ All templates have required fields")
+            
+            # Store first template ID for later tests
+            self.template_id = templates[0]["id"]
+            
+            return True
+        
+        return False
+
+    def test_get_template_by_id(self):
+        """Test GET /api/templates/{template_id} - test with valid and invalid IDs"""
+        # Test with valid ID
+        if not hasattr(self, 'template_id') or not self.template_id:
+            print("   ❌ No template ID available from previous test")
+            return False
+        
+        success, response = self.run_test(
+            f"Get Template by ID (valid: {self.template_id})",
+            "GET",
+            f"templates/{self.template_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["id", "name", "description", "category", "ats_optimized", "layout_config", "styling"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing field in template response: {field}")
+                return False
+        
+        if response.get("id") != self.template_id:
+            print(f"   ❌ Template ID mismatch: expected {self.template_id}, got {response.get('id')}")
+            return False
+        
+        print("   ✅ Valid template ID returns correct template")
+        
+        # Test with invalid ID
+        invalid_id = "nonexistent-template"
+        success, response = self.run_test(
+            f"Get Template by ID (invalid: {invalid_id})",
+            "GET",
+            f"templates/{invalid_id}",
+            404
+        )
+        
+        if success:
+            print("   ✅ Invalid template ID correctly returns 404")
+            return True
+        else:
+            print("   ❌ Invalid template ID should return 404")
+            return False
+
+    def test_apply_template_to_resume(self):
+        """Test POST /api/templates/{template_id}/apply/{resume_id} - test template application"""
+        if not hasattr(self, 'template_id') or not self.template_id:
+            print("   ❌ No template ID available")
+            return False
+        
+        if not self.resume_id:
+            print("   ❌ No resume ID available")
+            return False
+        
+        # Test applying template to valid resume
+        success, response = self.run_test(
+            f"Apply Template to Resume",
+            "POST",
+            f"templates/{self.template_id}/apply/{self.resume_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify the response is a resume with template applied
+        if response.get("id") != self.resume_id:
+            print(f"   ❌ Resume ID mismatch after template application")
+            return False
+        
+        # Check if template fields were added
+        if "template_id" not in response and "template_config" not in response:
+            print("   ❌ Template fields not found in updated resume")
+            return False
+        
+        print("   ✅ Template successfully applied to resume")
+        
+        # Test with invalid template ID
+        invalid_template = "nonexistent-template"
+        success, response = self.run_test(
+            f"Apply Invalid Template",
+            "POST",
+            f"templates/{invalid_template}/apply/{self.resume_id}",
+            404
+        )
+        
+        if success:
+            print("   ✅ Invalid template ID correctly returns 404")
+        else:
+            print("   ❌ Invalid template ID should return 404")
+            return False
+        
+        # Test with invalid resume ID
+        invalid_resume = "nonexistent-resume"
+        success, response = self.run_test(
+            f"Apply Template to Invalid Resume",
+            "POST",
+            f"templates/{self.template_id}/apply/{invalid_resume}",
+            404
+        )
+        
+        if success:
+            print("   ✅ Invalid resume ID correctly returns 404")
+            return True
+        else:
+            print("   ❌ Invalid resume ID should return 404")
+            return False
+
+    # Phase 6 Collaboration System Tests
+    def test_create_share_link(self):
+        """Test POST /api/share - create shareable links with different permissions"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available for sharing")
+            return False
+        
+        # Test creating share link with view permission
+        share_data = {
+            "resume_id": self.resume_id,
+            "permissions": "view",
+            "expires_in_days": 7
+        }
+        
+        success, response = self.run_test(
+            "Create Share Link (view)",
+            "POST",
+            "share",
+            200,
+            data=share_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["id", "resume_id", "share_token", "permissions", "expires_at", "is_active"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing field in share link response: {field}")
+                return False
+        
+        if response.get("resume_id") != self.resume_id:
+            print(f"   ❌ Resume ID mismatch in share link")
+            return False
+        
+        if response.get("permissions") != "view":
+            print(f"   ❌ Permissions mismatch in share link")
+            return False
+        
+        # Store share token for later tests
+        self.share_token = response.get("share_token")
+        print(f"   ✅ Share link created with token: {self.share_token}")
+        
+        # Test creating share link with comment permission
+        comment_share_data = {
+            "resume_id": self.resume_id,
+            "permissions": "comment"
+        }
+        
+        success, response = self.run_test(
+            "Create Share Link (comment)",
+            "POST",
+            "share",
+            200,
+            data=comment_share_data
+        )
+        
+        if success and response.get("permissions") == "comment":
+            print("   ✅ Comment permission share link created")
+            self.comment_share_token = response.get("share_token")
+        else:
+            print("   ❌ Failed to create comment permission share link")
+            return False
+        
+        # Test creating share link with suggest permission
+        suggest_share_data = {
+            "resume_id": self.resume_id,
+            "permissions": "suggest"
+        }
+        
+        success, response = self.run_test(
+            "Create Share Link (suggest)",
+            "POST",
+            "share",
+            200,
+            data=suggest_share_data
+        )
+        
+        if success and response.get("permissions") == "suggest":
+            print("   ✅ Suggest permission share link created")
+            self.suggest_share_token = response.get("share_token")
+            return True
+        else:
+            print("   ❌ Failed to create suggest permission share link")
+            return False
+
+    def test_get_shared_resume(self):
+        """Test GET /api/share/{share_token} - access shared resumes"""
+        if not hasattr(self, 'share_token') or not self.share_token:
+            print("   ❌ No share token available from previous test")
+            return False
+        
+        success, response = self.run_test(
+            f"Get Shared Resume",
+            "GET",
+            f"share/{self.share_token}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        if "resume" not in response or "share_info" not in response:
+            print("   ❌ Missing resume or share_info in response")
+            return False
+        
+        resume = response.get("resume")
+        share_info = response.get("share_info")
+        
+        # Verify resume data
+        if resume.get("id") != self.resume_id:
+            print(f"   ❌ Resume ID mismatch in shared resume")
+            return False
+        
+        # Verify share info
+        if share_info.get("permissions") != "view":
+            print(f"   ❌ Permissions mismatch in share info")
+            return False
+        
+        print("   ✅ Shared resume accessed successfully")
+        
+        # Test with invalid share token
+        invalid_token = "invalid-token"
+        success, response = self.run_test(
+            f"Get Shared Resume (invalid token)",
+            "GET",
+            f"share/{invalid_token}",
+            404
+        )
+        
+        if success:
+            print("   ✅ Invalid share token correctly returns 404")
+            return True
+        else:
+            print("   ❌ Invalid share token should return 404")
+            return False
+
+    def test_create_comment(self):
+        """Test POST /api/comments - create comments on resumes"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available for commenting")
+            return False
+        
+        comment_data = {
+            "resume_id": self.resume_id,
+            "section": "summary",
+            "content": "This summary could be more specific about your achievements.",
+            "author_name": "Reviewer Sarah",
+            "author_email": "sarah@example.com"
+        }
+        
+        success, response = self.run_test(
+            "Create Comment",
+            "POST",
+            "comments",
+            200,
+            data=comment_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["id", "resume_id", "section", "content", "author_name", "status", "created_at"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing field in comment response: {field}")
+                return False
+        
+        if response.get("resume_id") != self.resume_id:
+            print(f"   ❌ Resume ID mismatch in comment")
+            return False
+        
+        if response.get("section") != "summary":
+            print(f"   ❌ Section mismatch in comment")
+            return False
+        
+        if response.get("author_name") != "Reviewer Sarah":
+            print(f"   ❌ Author name mismatch in comment")
+            return False
+        
+        # Store comment ID for later tests
+        self.comment_id = response.get("id")
+        print(f"   ✅ Comment created with ID: {self.comment_id}")
+        
+        # Test creating another comment on different section
+        experience_comment = {
+            "resume_id": self.resume_id,
+            "section": "experience.0",
+            "field": "bullets",
+            "content": "Consider adding more quantified metrics to your bullet points.",
+            "author_name": "HR Manager John"
+        }
+        
+        success, response = self.run_test(
+            "Create Experience Comment",
+            "POST",
+            "comments",
+            200,
+            data=experience_comment
+        )
+        
+        if success:
+            print("   ✅ Experience section comment created")
+            return True
+        else:
+            print("   ❌ Failed to create experience comment")
+            return False
+
+    def test_get_resume_comments(self):
+        """Test GET /api/comments/{resume_id} - retrieve comments"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available")
+            return False
+        
+        success, response = self.run_test(
+            "Get Resume Comments",
+            "GET",
+            f"comments/{self.resume_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        if "comments" not in response:
+            print("   ❌ Missing comments key in response")
+            return False
+        
+        comments = response.get("comments", [])
+        
+        # Should have at least the comments we created
+        if len(comments) < 2:
+            print(f"   ❌ Expected at least 2 comments, got {len(comments)}")
+            return False
+        
+        print(f"   ✅ Retrieved {len(comments)} comments")
+        
+        # Verify comment structure
+        for comment in comments:
+            required_fields = ["id", "resume_id", "section", "content", "author_name"]
+            for field in required_fields:
+                if field not in comment:
+                    print(f"   ❌ Comment missing field: {field}")
+                    return False
+        
+        print("   ✅ All comments have required fields")
+        return True
+
+    def test_create_suggestion(self):
+        """Test POST /api/suggestions - create improvement suggestions"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available for suggestions")
+            return False
+        
+        suggestion_data = {
+            "resume_id": self.resume_id,
+            "section": "contact",
+            "field": "full_name",
+            "original_value": "Aditya Test",
+            "suggested_value": "Aditya Kumar Test",
+            "reason": "Adding middle name for better professional presentation"
+        }
+        
+        success, response = self.run_test(
+            "Create Suggestion",
+            "POST",
+            "suggestions",
+            200,
+            data=suggestion_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["id", "resume_id", "section", "field", "original_value", "suggested_value", "reason", "status", "created_at"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing field in suggestion response: {field}")
+                return False
+        
+        if response.get("resume_id") != self.resume_id:
+            print(f"   ❌ Resume ID mismatch in suggestion")
+            return False
+        
+        if response.get("status") != "pending":
+            print(f"   ❌ Expected status 'pending', got {response.get('status')}")
+            return False
+        
+        # Store suggestion ID for later tests
+        self.suggestion_id = response.get("id")
+        print(f"   ✅ Suggestion created with ID: {self.suggestion_id}")
+        
+        # Create another suggestion for skills
+        skills_suggestion = {
+            "resume_id": self.resume_id,
+            "section": "skills",
+            "original_value": "React, Node, AWS",
+            "suggested_value": "React.js, Node.js, AWS, TypeScript, MongoDB",
+            "reason": "Adding more specific technologies and expanding skill set"
+        }
+        
+        success, response = self.run_test(
+            "Create Skills Suggestion",
+            "POST",
+            "suggestions",
+            200,
+            data=skills_suggestion
+        )
+        
+        if success:
+            print("   ✅ Skills suggestion created")
+            self.skills_suggestion_id = response.get("id")
+            return True
+        else:
+            print("   ❌ Failed to create skills suggestion")
+            return False
+
+    def test_get_resume_suggestions(self):
+        """Test GET /api/suggestions/{resume_id} - retrieve suggestions"""
+        if not self.resume_id:
+            print("   ❌ No resume ID available")
+            return False
+        
+        success, response = self.run_test(
+            "Get Resume Suggestions",
+            "GET",
+            f"suggestions/{self.resume_id}",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        if "suggestions" not in response:
+            print("   ❌ Missing suggestions key in response")
+            return False
+        
+        suggestions = response.get("suggestions", [])
+        
+        # Should have at least the suggestions we created
+        if len(suggestions) < 2:
+            print(f"   ❌ Expected at least 2 suggestions, got {len(suggestions)}")
+            return False
+        
+        print(f"   ✅ Retrieved {len(suggestions)} suggestions")
+        
+        # Verify suggestion structure
+        for suggestion in suggestions:
+            required_fields = ["id", "resume_id", "section", "original_value", "suggested_value", "status"]
+            for field in required_fields:
+                if field not in suggestion:
+                    print(f"   ❌ Suggestion missing field: {field}")
+                    return False
+        
+        print("   ✅ All suggestions have required fields")
+        return True
+
+    def test_accept_suggestion(self):
+        """Test POST /api/suggestions/{suggestion_id}/accept - accept suggestions"""
+        if not hasattr(self, 'suggestion_id') or not self.suggestion_id:
+            print("   ❌ No suggestion ID available from previous test")
+            return False
+        
+        success, response = self.run_test(
+            f"Accept Suggestion",
+            "POST",
+            f"suggestions/{self.suggestion_id}/accept",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response
+        if "message" not in response or "suggestion_id" not in response:
+            print("   ❌ Missing message or suggestion_id in response")
+            return False
+        
+        if response.get("suggestion_id") != self.suggestion_id:
+            print(f"   ❌ Suggestion ID mismatch in response")
+            return False
+        
+        print("   ✅ Suggestion accepted successfully")
+        
+        # Test accepting already accepted suggestion (should fail)
+        success, response = self.run_test(
+            f"Accept Already Accepted Suggestion",
+            "POST",
+            f"suggestions/{self.suggestion_id}/accept",
+            400
+        )
+        
+        if success:
+            print("   ✅ Already accepted suggestion correctly returns 400")
+        else:
+            print("   ❌ Already accepted suggestion should return 400")
+            return False
+        
+        # Test with invalid suggestion ID
+        invalid_id = "nonexistent-suggestion"
+        success, response = self.run_test(
+            f"Accept Invalid Suggestion",
+            "POST",
+            f"suggestions/{invalid_id}/accept",
+            404
+        )
+        
+        if success:
+            print("   ✅ Invalid suggestion ID correctly returns 404")
+            return True
+        else:
+            print("   ❌ Invalid suggestion ID should return 404")
+            return False
+
+    def test_reject_suggestion(self):
+        """Test POST /api/suggestions/{suggestion_id}/reject - reject suggestions"""
+        if not hasattr(self, 'skills_suggestion_id') or not self.skills_suggestion_id:
+            print("   ❌ No skills suggestion ID available from previous test")
+            return False
+        
+        success, response = self.run_test(
+            f"Reject Suggestion",
+            "POST",
+            f"suggestions/{self.skills_suggestion_id}/reject",
+            200
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response
+        if "message" not in response or "suggestion_id" not in response:
+            print("   ❌ Missing message or suggestion_id in response")
+            return False
+        
+        if response.get("suggestion_id") != self.skills_suggestion_id:
+            print(f"   ❌ Suggestion ID mismatch in response")
+            return False
+        
+        print("   ✅ Suggestion rejected successfully")
+        
+        # Test with invalid suggestion ID
+        invalid_id = "nonexistent-suggestion"
+        success, response = self.run_test(
+            f"Reject Invalid Suggestion",
+            "POST",
+            f"suggestions/{invalid_id}/reject",
+            404
+        )
+        
+        if success:
+            print("   ✅ Invalid suggestion ID correctly returns 404")
+            return True
+        else:
+            print("   ❌ Invalid suggestion ID should return 404")
+            return False
+
     def test_presets_endpoint(self):
         """Test GET /api/presets endpoint - Phase 3 requirement"""
         success, response = self.run_test(
