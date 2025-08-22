@@ -609,7 +609,7 @@ function Home() {
           {/* Preview Column */}
           {(previewMode === 'preview' || previewMode === 'split') && (
             <div className={`${
-              previewMode === 'split' ? 'lg:col-span-6' : 'col-span-1'
+              previewMode === 'split' ? 'lg:col-span-1' : 'col-span-1'
             }`}>
               <div className="space-y-6">
                 {/* Live Resume Preview */}
