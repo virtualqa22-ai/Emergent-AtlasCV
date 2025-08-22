@@ -102,58 +102,79 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Implement Phase 4 AI Assist per roadmap: rewrite bullets, linting, keyword suggestions using Emergent LLM key."
+user_problem_statement: "Implement Phase 5 Import/Export: PDF import/export with country preset styling, 5MB file limit, auto-populate fields after parsing."
 backend:
-  - task: "Add AI Assist endpoints (/api/ai/rewrite-bullets, /api/ai/lint, /api/ai/suggest-keywords)"
+  - task: "Add PDF import endpoint (/api/import/upload) with pdfplumber parsing"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "All AI endpoints passed tests with valid JSON responses and fallbacks. Existing endpoints intact."
-      - working: true
-        agent: "testing"
-        comment: "COMPREHENSIVE TESTING COMPLETED: Phase 4 AI endpoints (4/4 tests passed), Core resume functions (7/7 tests passed), Edge cases (19/19 tests passed), LLM integration (6/6 tests passed). All endpoints return valid JSON, handle empty/long/special character inputs correctly, provide proper error handling (422 for invalid payloads, 404 for missing resources), and EMERGENT_LLM_KEY integration working with meaningful AI improvements and heuristic fallbacks. JD parsing extracts keywords correctly, coverage analysis works with realistic data, presets and validation endpoints function properly. Total: 47/47 tests passed across all categories."
-frontend:
-  - task: "Wire minimal AI UI (Rewrite with AI, Lint with AI, Suggest synonyms)"
-    implemented: true
-    working: true
-    file: "/app/frontend/src/App.js"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "main"
-        comment: "Added buttons and client logic calling /api endpoints, loading states and result rendering."
-      - working: true
-        agent: "testing"
-        comment: "All AI features tested successfully: 1) 'Lint with AI' in Summary section works perfectly - detected passive voice, filler words, provided specific suggestions. 2) 'Rewrite with AI' for experience bullets works - enhanced text with metrics suggestions. 3) 'Lint' button for bullets works. 4) JD keyword extraction works - extracted 24 keywords from sample JD. 5) 'Suggest synonyms' works perfectly - generated synonyms and prioritize sections, synonym chips clickable and add to Skills field. 6) Regression test passed - ATS Score and JD coverage components remain visible and functional."
-      - working: true
-        agent: "testing"
-        comment: "COMPREHENSIVE PHASE 4 AI TESTING COMPLETED: All AI features verified working perfectly via automated Playwright testing. Summary Linting: Successfully detected filler words ('synergy', 'leverage') and passive voice, provided actionable suggestions. JD Keywords: Extracted 25 keywords correctly from technical job description. Synonym Suggestions: Generated comprehensive synonyms with clickable chips that successfully add skills to Skills section. Bullet Rewriting: AI improved passive voice bullets to impactful language with metrics focus. Individual Bullet Linting: Detected and provided specific feedback on bullet issues. Mobile Responsiveness: All AI buttons accessible on mobile (390x844 viewport). Regression Testing: ATS scoring (0-100), JD coverage meter, locale switching, save functionality all intact. UI/UX: Loading states display correctly, results render properly, keyboard navigation functional. No critical issues found - all Phase 4 AI features are production-ready and fully integrated."
+        comment: "Added PDF parsing with pdfplumber, file upload with 5MB limit, extract resume data and map to schema"
+  - task: "Add PDF export endpoint (/api/export/pdf/{id}) with preset styling"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added reportlab PDF generation with country preset styling and proper field positioning"
+  - task: "Add JSON export endpoint (/api/export/json/{id})"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added JSON export functionality for resume data"
+frontend:
+  - task: "Replace placeholder Import/Export buttons with functional UI"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added file upload interface, PDF/JSON export buttons, import result modal with extracted data preview"
+  - task: "Add import result modal and data application"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added modal to show import results, warnings, and allow users to apply extracted data to form"
 metadata:
   created_by: "main_agent"
-  version: "1.0"
-  test_sequence: 4
+  version: "1.1"
+  test_sequence: 3
   run_ui: true
 
 test_plan:
   current_focus:
-    - "Frontend: verify AI buttons trigger backend and update UI"
-    - "Regression: JD parse/coverage still render"
+    - "Backend: Test PDF import/export endpoints with sample files"
+    - "Frontend: Test file upload, import modal, and export downloads"
+    - "Integration: Test complete import-to-export workflow"
   stuck_tasks: []
-  test_all: false
+  test_all: true
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Please run automated frontend tests to click 'Rewrite with AI', 'Lint with AI', and 'Suggest synonyms' flows and validate UI updates."
-  - agent: "testing"
-    message: "BACKEND TESTING COMPLETE: Comprehensive testing of Phase 4 AI features completed successfully. All 47 tests passed across 4 categories: (1) Core AI endpoints with realistic data - all return valid JSON with proper structure, (2) Edge cases including empty inputs, long text, special characters, invalid payloads - all handled gracefully, (3) EMERGENT_LLM_KEY integration verified - AI provides meaningful improvements with heuristic fallbacks, (4) Regression testing - all existing endpoints (resume CRUD, JD parsing/coverage, presets, validation) remain functional. No critical issues found. Backend is production-ready for Phase 4 AI features."
-  - agent: "testing"
-    message: "COMPREHENSIVE FRONTEND TESTING COMPLETED: All Phase 4 AI features tested successfully via Playwright automation. Results: (1) Summary Linting - Successfully detected filler words ('synergy', 'leverage') and passive voice, provided specific suggestions and improvements. (2) JD Keyword Extraction - Extracted 25 keywords from sample job description correctly. (3) Synonym Suggestions - Generated comprehensive synonyms for extracted keywords, synonym chips are clickable and successfully add skills to Skills section. (4) Bullet Rewriting - AI successfully improved bullet text from passive voice to more impactful language. (5) Individual Bullet Linting - Detected issues in bullet points and provided specific feedback. (6) Regression Testing - ATS scoring (0-100 scale), JD coverage meter, locale switching, and save functionality all working correctly. (7) Mobile Responsiveness - All AI buttons accessible and functional on mobile viewport (390x844). (8) UI/UX - Loading states appear correctly, results display properly, keyboard navigation works. No critical issues found. All AI features are production-ready and fully integrated with existing functionality."
+    message: "Phase 5 Import/Export implementation complete. Added PDF parsing with pdfplumber, PDF export with reportlab using country presets, file upload UI with 5MB limit, and import result modal. Ready for comprehensive testing."
