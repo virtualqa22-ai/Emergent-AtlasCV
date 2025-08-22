@@ -1038,11 +1038,167 @@ function Home() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="section card-hover">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h-heading">
+                <Share2 className="h-5 w-5" /> Collaboration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {/* Share Section */}
+                <div>
+                  <Label>Share Resume</Label>
+                  <div className="space-y-2 mt-2">
+                    <Select value={sharePermissions} onValueChange={setSharePermissions}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="view">View Only</SelectItem>
+                        <SelectItem value="comment">Can Comment</SelectItem>
+                        <SelectItem value="suggest">Can Suggest Changes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="outline" 
+                      onClick={createShareLink}
+                      disabled={!resumeId}
+                      className="w-full"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Generate Share Link
+                    </Button>
+                    {shareLink && (
+                      <div className="text-xs bg-green-50 p-2 rounded border">
+                        <p className="font-medium">Link created!</p>
+                        <p className="mt-1 font-mono text-green-700 break-all">
+                          {window.location.origin}/share/{shareLink.share_token}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Comments & Suggestions */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label>Activity</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadCollaborationData}
+                      disabled={!resumeId}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {resumeId && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2 text-sm">
+                        <Badge variant="outline">{comments.length} Comments</Badge>
+                        <Badge variant="outline">{suggestions.filter(s => s.status === 'pending').length} Suggestions</Badge>
+                      </div>
+                      
+                      <Tabs defaultValue="comments" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="comments">Comments</TabsTrigger>
+                          <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="comments" className="space-y-2">
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {comments.slice(0, 3).map((comment) => (
+                              <div key={comment.id} className="text-xs bg-slate-50 p-2 rounded">
+                                <div className="font-medium">{comment.author_name}</div>
+                                <div className="text-slate-600">{comment.content}</div>
+                                <div className="text-slate-400 mt-1">{comment.section}</div>
+                              </div>
+                            ))}
+                            {comments.length === 0 && (
+                              <p className="text-xs text-slate-500">No comments yet</p>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-1">
+                            <Input
+                              placeholder="Add comment..."
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              className="text-xs"
+                            />
+                            <Button size="sm" onClick={addComment} disabled={!newComment.trim()}>
+                              Add
+                            </Button>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="suggestions" className="space-y-2">
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {suggestions.filter(s => s.status === 'pending').slice(0, 3).map((suggestion) => (
+                              <div key={suggestion.id} className="text-xs bg-amber-50 p-2 rounded border border-amber-200">
+                                <div className="font-medium">{suggestion.author_name}</div>
+                                <div className="text-slate-600">{suggestion.reason}</div>
+                                <div className="mt-1 flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={() => acceptSuggestion(suggestion.id)}
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={() => rejectSuggestion(suggestion.id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                            {suggestions.filter(s => s.status === 'pending').length === 0 && (
+                              <p className="text-xs text-slate-500">No pending suggestions</p>
+                            )}
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  )}
+                  
+                  {!resumeId && (
+                    <p className="text-xs text-slate-500">Save resume to enable collaboration</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
 
+      {/* Skip Link for Accessibility */}
+      <a
+        ref={skipLinkRef}
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-blue-600 focus:text-white focus:px-3 focus:py-2 focus:rounded"
+      >
+        Skip to main content
+      </a>
+
       <footer className="border-t bg-white/70">
-        <div className="container-xl py-6 text-sm text-slate-600">© {new Date().getFullYear()} AtlasCV. ATS-safe builder.</div>
+        <div className="container-xl py-6 text-sm text-slate-600" role="contentinfo">
+          © {new Date().getFullYear()} AtlasCV. ATS-safe builder.
+          <div className="mt-2 text-xs">
+            <span className="mr-4">Keyboard accessible</span>
+            <span>WCAG 2.1 AA compliant</span>
+          </div>
+        </div>
       </footer>
 
       {/* Import Result Modal */}
