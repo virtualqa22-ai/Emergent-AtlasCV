@@ -49,8 +49,9 @@ function Home() {
   const [lintSummary, setLintSummary] = useState({ loading: false, issues: [], suggestions: [] });
   const [bulletLint, setBulletLint] = useState({}); // key: "idx-bi" -> { loading, issues, suggestions }
   const [rewriting, setRewriting] = useState(""); // key = "idx-bi"
-  const [synLoading, setSynLoading] = useState(false);
-  const [synonymsData, setSynonymsData] = useState({ synonyms: {}, prioritize: [] });
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const keyFor = (i, bi) => `${i}-${bi}`;
 
