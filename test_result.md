@@ -249,12 +249,15 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Frontend testing of Phase 7 privacy features"
-    - "Local-only mode functionality"
-    - "GDPR cookie consent and data management"
-  stuck_tasks: []
+    - "Fix React infinite loop error in cookie consent"
+    - "Fix missing Settings button in header"
+    - "Re-test privacy features after fixes"
+  stuck_tasks:
+    - "Add GDPR cookie consent banner"
+    - "Create privacy settings and data management UI"
+    - "Implement local-only mode for privacy-conscious users"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"
@@ -263,3 +266,5 @@ agent_communication:
     message: "✅ PHASE 7 BACKEND TESTING COMPLETE: All privacy/compliance backend features are working perfectly! Tested encryption functionality, GDPR endpoints (export-my-data, delete-my-data), privacy consent endpoints, privacy info endpoint, and local mode settings. All 7 Phase 7 backend tests passed (30/30 total tests passed). Fixed minor ObjectId serialization issue in GDPR deletion. Backend implementation is solid and ready for production. Frontend tasks remain to be implemented and tested."
   - agent: "main"
     message: "✅ Phase 7 implementation complete! Backend: Field encryption, GDPR endpoints (export/delete), privacy consent tracking. Frontend: Local-only mode with encryption, cookie consent banner, comprehensive privacy settings UI. Ready for testing."
+  - agent: "testing"
+    message: "❌ CRITICAL FRONTEND ISSUES FOUND: Phase 7 privacy features have severe React errors preventing functionality. 1) Cookie consent banner causes infinite loop ('Maximum update depth exceeded') when analytics consent enabled - 'Analytics enabled' logs repeatedly. 2) Settings button missing from header (0 buttons found) - cannot access Privacy Settings modal. 3) All privacy features (local-only mode, data export/deletion, privacy settings) are inaccessible. App shows red error screen. Need immediate fix for cookie consent callback and Settings button rendering."
