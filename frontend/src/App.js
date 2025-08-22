@@ -926,22 +926,32 @@ function Home() {
       <header className="sticky top-0 z-30 border-b header-blur bg-white/70" role="banner">
         <div className="container-xl flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="AtlasCV" className="brand-logo" />
-            <span className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</span>
-            <span className="text-sm" style={{color:"#16A34A"}}>ATS-Optimized Resume Builder</span>
+            <img src={LOGO_URL} alt="AtlasCV Logo - ATS-optimized resume builder" className="brand-logo" />
+            <h1 className="font-semibold h-heading" style={{color:"#1D4ED8"}}>AtlasCV</h1>
+            <span className="text-sm" style={{color:"#16A34A"}} role="img" aria-label="Product description">ATS-Optimized Resume Builder</span>
           </div>
           <nav role="navigation" aria-label="Main navigation">
             <div className="flex items-center gap-2">
-              <Button className="btn-cta" onClick={validateLocale} variant="outline">
-                <ShieldCheck className="h-4 w-4" /> 
-                <span className="sr-only">Validate resume according to locale preset</span>
+              <Button 
+                className="btn-cta" 
+                onClick={validateLocale} 
+                variant="outline"
+                aria-describedby="validate-help"
+              >
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" /> 
                 Validate preset
               </Button>
-              <Button className="btn-cta" onClick={saveResume} disabled={saving}>
-                <Save className="h-4 w-4" /> 
-                <span className="sr-only">Save current resume draft</span>
+              <div id="validate-help" className="sr-only">Validate resume according to selected locale preset rules</div>
+              <Button 
+                className="btn-cta" 
+                onClick={saveResume} 
+                disabled={saving}
+                aria-describedby="save-help"
+              >
+                <Save className="h-4 w-4" aria-hidden="true" /> 
                 {saving ? "Saving..." : "Save Draft"}
               </Button>
+              <div id="save-help" className="sr-only">Save current resume draft to continue editing later</div>
             </div>
           </nav>
         </div>
