@@ -34,9 +34,21 @@ const defaultResumeIN = {
 
 function useResumeDraft() {
   const [resumeId, setResumeId] = useState(() => localStorage.getItem("atlascv_resume_id") || "");
-  const remember = (id) => { setResumeId(id); localStorage.setItem("atlascv_resume_id", id); };
-  const clear = () => { setResumeId(""); localStorage.removeItem("atlascv_resume_id"); };
-  return { resumeId, remember, clear };
+  const { isLocalMode, saveLocalResume, getLocalResume } = useLocalOnlyMode();
+  
+  const remember = (id) => { 
+    if (!isLocalMode) {
+      setResumeId(id); 
+      localStorage.setItem("atlascv_resume_id", id); 
+    }
+  };
+  
+  const clear = () => { 
+    setResumeId(""); 
+    localStorage.removeItem("atlascv_resume_id"); 
+  };
+  
+  return { resumeId, remember, clear, isLocalMode, saveLocalResume, getLocalResume };
 }
 
 function Home() {
