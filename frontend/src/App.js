@@ -649,6 +649,128 @@ function Home() {
         </CardContent>
       </Card>
     ),
+    templates: (
+      <Card className="section card-hover" key="templates">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 h-heading">
+            <LayoutTemplate className="h-5 w-5" /> Template Gallery
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Choose from our ATS-optimized templates designed for different industries and roles.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.slice(0, 3).map((template) => (
+                <div
+                  key={template.id}
+                  className={`border rounded-lg p-3 cursor-pointer transition-all hover:border-blue-300 hover:shadow-sm ${
+                    selectedTemplate === template.id ? 'border-blue-500 bg-blue-50' : ''
+                  }`}
+                  onClick={() => setSelectedTemplate(template.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select ${template.name} template`}
+                  onKeyDown={(e) => e.key === 'Enter' && setSelectedTemplate(template.id)}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    {getTemplateIcon(template.category)}
+                    <span className="font-medium text-sm">{template.name}</span>
+                    {template.ats_optimized && (
+                      <Badge variant="secondary" className="text-xs">ATS</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600">{template.description}</p>
+                  <div className="mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {template.category}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Browse All Templates</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Choose Template</DialogTitle>
+                    <DialogDescription>
+                      Select a professional, ATS-optimized template for your resume
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="h-96">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                      {templates.map((template) => (
+                        <div
+                          key={template.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-blue-300 hover:shadow-md ${
+                            selectedTemplate === template.id ? 'border-blue-500 bg-blue-50' : ''
+                          }`}
+                          onClick={() => setSelectedTemplate(template.id)}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Select ${template.name} template`}
+                          onKeyDown={(e) => e.key === 'Enter' && setSelectedTemplate(template.id)}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            {getTemplateIcon(template.category)}
+                            <span className="font-semibold">{template.name}</span>
+                            {template.ats_optimized && (
+                              <Badge variant="secondary">ATS Safe</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600 mb-3">{template.description}</p>
+                          <div className="flex gap-2">
+                            <Badge variant="outline">{template.category}</Badge>
+                          </div>
+                          <div className="mt-3 text-xs text-slate-500">
+                            Font: {template.styling.font_family.split(',')[0]} • 
+                            Size: {template.styling.font_size}pt
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowTemplateDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
+                      disabled={!selectedTemplate || applyingTemplate}
+                    >
+                      {applyingTemplate ? "Applying..." : "Apply Template"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              {selectedTemplate && (
+                <Button 
+                  onClick={() => applyTemplate(selectedTemplate)}
+                  disabled={applyingTemplate || !resumeId}
+                >
+                  {applyingTemplate ? "Applying..." : "Apply Selected"}
+                </Button>
+              )}
+            </div>
+            
+            {!resumeId && (
+              <p className="text-xs text-slate-500">Save your resume first to apply templates</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    ),
     summary: (
       <Card className="section card-hover" key="summary">
         <CardHeader>
