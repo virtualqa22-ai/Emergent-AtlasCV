@@ -16,3 +16,8 @@ python-multipart>=0.0.9
 jq>=1.6.0
 typer>=0.9.0
 emergentintegrations
+pdfplumber==0.10.3
+PyPDF2==3.0.1
+reportlab==4.0.9
+weasyprint==60.2
+python-multipart==0.0.9
