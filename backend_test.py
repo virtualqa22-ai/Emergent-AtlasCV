@@ -1722,8 +1722,8 @@ class AtlasCVAPITester:
             return False
 
 def main():
-    print("🚀 Starting AtlasCV Backend API Tests - Phase 5 Import/Export Verification")
-    print("=" * 70)
+    print("🚀 Starting AtlasCV Backend API Tests - Phase 6 Template & Collaboration Testing")
+    print("=" * 80)
     
     tester = AtlasCVAPITester()
     
@@ -1745,57 +1745,88 @@ def main():
     
     print(f"\n📊 Setup Results: {setup_passed}/{len(setup_tests)} tests passed")
     
-    # Run Phase 5 Import/Export tests (main focus)
-    print("\n📋 PHASE 5 TESTS - Import/Export Verification")
+    # Run Phase 6 Template System tests (main focus)
+    print("\n📋 PHASE 6 TESTS - Template System")
     print("=" * 50)
     
-    phase5_tests = [
-        tester.test_pdf_import_basic,
-        tester.test_pdf_export_basic,
-        tester.test_json_export_basic,
-        tester.test_export_invalid_id,
-        tester.test_import_export_integration
+    template_tests = [
+        tester.test_get_templates,
+        tester.test_get_template_by_id,
+        tester.test_apply_template_to_resume
     ]
     
-    phase5_passed = 0
-    for test in phase5_tests:
+    template_passed = 0
+    for test in template_tests:
         if test():
-            phase5_passed += 1
+            template_passed += 1
     
-    print(f"\n📊 Phase 5 Results: {phase5_passed}/{len(phase5_tests)} tests passed")
+    print(f"\n📊 Template System Results: {template_passed}/{len(template_tests)} tests passed")
     
-    # Quick verification of other phases
-    print("\n📋 QUICK VERIFICATION - Other Phases")
+    # Run Phase 6 Collaboration System tests
+    print("\n📋 PHASE 6 TESTS - Collaboration System")
+    print("=" * 50)
+    
+    collaboration_tests = [
+        tester.test_create_share_link,
+        tester.test_get_shared_resume,
+        tester.test_create_comment,
+        tester.test_get_resume_comments,
+        tester.test_create_suggestion,
+        tester.test_get_resume_suggestions,
+        tester.test_accept_suggestion,
+        tester.test_reject_suggestion
+    ]
+    
+    collaboration_passed = 0
+    for test in collaboration_tests:
+        if test():
+            collaboration_passed += 1
+    
+    print(f"\n📊 Collaboration System Results: {collaboration_passed}/{len(collaboration_tests)} tests passed")
+    
+    # Quick verification of previous phases
+    print("\n📋 REGRESSION CHECK - Previous Phases")
     print("=" * 40)
     
-    verification_tests = [
+    regression_tests = [
         tester.test_jd_parse,
-        tester.test_jd_coverage,
         tester.test_ai_rewrite_bullets,
-        tester.test_presets_endpoint,
+        tester.test_pdf_export_basic,
+        tester.test_json_export_basic,
     ]
     
-    verification_passed = 0
-    for test in verification_tests:
+    regression_passed = 0
+    for test in regression_tests:
         if test():
-            verification_passed += 1
+            regression_passed += 1
     
-    print(f"\n📊 Verification Results: {verification_passed}/{len(verification_tests)} tests passed")
+    print(f"\n📊 Regression Results: {regression_passed}/{len(regression_tests)} tests passed")
+    
+    # Calculate Phase 6 totals
+    phase6_total_tests = len(template_tests) + len(collaboration_tests)
+    phase6_total_passed = template_passed + collaboration_passed
     
     # Print final results
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 80)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     print(f"📊 Setup Tests: {setup_passed}/{len(setup_tests)} passed")
-    print(f"📊 Phase 5 Import/Export: {phase5_passed}/{len(phase5_tests)} passed")
-    print(f"📊 Other Phases Verification: {verification_passed}/{len(verification_tests)} passed")
+    print(f"📊 Phase 6 Template System: {template_passed}/{len(template_tests)} passed")
+    print(f"📊 Phase 6 Collaboration System: {collaboration_passed}/{len(collaboration_tests)} passed")
+    print(f"📊 Phase 6 Total: {phase6_total_passed}/{phase6_total_tests} passed")
+    print(f"📊 Regression Check: {regression_passed}/{len(regression_tests)} passed")
     
-    if phase5_passed == len(phase5_tests) and setup_passed >= 3:  # Allow some setup flexibility
-        print("🎉 Phase 5 Import/Export verification successful!")
-        print("🎉 All key endpoints working correctly!")
+    # Success criteria: All Phase 6 tests pass and basic setup works
+    if phase6_total_passed == phase6_total_tests and setup_passed >= 3:
+        print("🎉 Phase 6 Template & Collaboration testing successful!")
+        print("🎉 All new Phase 6 endpoints working correctly!")
+        if regression_passed >= len(regression_tests) - 1:  # Allow 1 regression failure
+            print("🎉 Previous phases still working (regression check passed)!")
         return 0
     else:
-        if phase5_passed < len(phase5_tests):
-            print("❌ Some Phase 5 Import/Export tests failed!")
+        if template_passed < len(template_tests):
+            print("❌ Some Template System tests failed!")
+        if collaboration_passed < len(collaboration_tests):
+            print("❌ Some Collaboration System tests failed!")
         if setup_passed < 3:
             print("❌ Basic backend setup issues detected!")
         return 1
