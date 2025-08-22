@@ -9,8 +9,13 @@ import { Label } from "./components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
-import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Settings, Lock } from "lucide-react";
 import { Progress } from "./components/ui/progress";
+
+// Phase 7 Privacy Components
+import CookieConsentBanner from "./components/privacy/CookieConsentBanner";
+import PrivacySettings from "./components/privacy/PrivacySettings";
+import { useLocalOnlyMode } from "./hooks/useLocalStorage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
