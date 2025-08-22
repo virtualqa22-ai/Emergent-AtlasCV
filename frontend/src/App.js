@@ -41,6 +41,8 @@ function useResumeDraft() {
 
 function Home() {
   const { resumeId, remember } = useResumeDraft();
+  
+  // Existing state
   const [locales, setLocales] = useState([]);
   const [presets, setPresets] = useState({});
   const [form, setForm] = useState(defaultResumeIN);
@@ -59,6 +61,27 @@ function Home() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
+
+  // Phase 6: Template & Collaboration state
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  
+  // Collaboration state
+  const [shareLink, setShareLink] = useState(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [sharePermissions, setSharePermissions] = useState("view");
+  const [comments, setComments] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showCollabPanel, setShowCollabPanel] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [commentSection, setCommentSection] = useState("");
+  
+  // Accessibility refs
+  const skipLinkRef = useRef(null);
+  const mainContentRef = useRef(null);
+  const [focusVisible, setFocusVisible] = useState(false);
 
   const keyFor = (i, bi) => `${i}-${bi}`;
 
