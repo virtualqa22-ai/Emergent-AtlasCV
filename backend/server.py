@@ -618,9 +618,12 @@ async def get_locales():
     return {
         "locales": [
             {"code": "US", "label": "United States"},
+            {"code": "CA", "label": "Canada"},
             {"code": "EU", "label": "European Union (Europass)"},
             {"code": "AU", "label": "Australia"},
             {"code": "IN", "label": "India"},
+            {"code": "SG", "label": "Singapore"},
+            {"code": "AE", "label": "United Arab Emirates"},
             {"code": "JP-R", "label": "Japan — Rirekisho"},
             {"code": "JP-S", "label": "Japan — Shokumu Keirekisho"},
         ]
