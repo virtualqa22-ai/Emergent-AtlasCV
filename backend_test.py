@@ -91,13 +91,15 @@ class AtlasCVAPITester:
         return False
 
     def test_create_resume(self):
-        """Test POST /api/resumes - create a minimal India resume"""
+        """Test POST /api/resumes - create a minimal India resume with realistic data"""
         test_resume = {
             "locale": "IN",
             "contact": {
-                "full_name": "Aditya Test",
-                "email": "aditya@example.com",
-                "phone": "+91 98123"
+                "full_name": "Rajesh Kumar Sharma",
+                "email": self.test_user_email,
+                "phone": "+91 9876543210",
+                "linkedin": "https://linkedin.com/in/rajesh-sharma",
+                "website": "https://rajesh-portfolio.dev"
             },
             "skills": ["React", "Node", "AWS"],
             "experience": [],
