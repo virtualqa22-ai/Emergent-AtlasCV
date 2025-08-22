@@ -561,7 +561,7 @@ function Home() {
           {/* Editor Column */}
           {(previewMode === 'edit' || previewMode === 'split') && (
             <div className={`space-y-6 ${
-              previewMode === 'split' ? 'lg:col-span-6' : 'col-span-1'
+              previewMode === 'split' ? 'lg:col-span-1' : 'col-span-1'
             }`}>
               {/* Template Selector */}
               <Card className="section card-hover">
