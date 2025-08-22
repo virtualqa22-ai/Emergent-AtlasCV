@@ -919,7 +919,7 @@ function Home() {
     ),
   };
 
-  const leftOrder = preset.section_order || ["profile","jd","summary","skills","experience","projects","education"];
+  const leftOrder = preset.section_order || ["profile","jd","templates","summary","skills","experience","projects","education"];
 
   return (
     <div className="min-h-screen atlas-gradient">
