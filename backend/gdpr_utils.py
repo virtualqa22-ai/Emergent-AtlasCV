@@ -36,7 +36,7 @@ class GDPRCompliance:
             }
             
             # Add resume data (decrypt sensitive fields for export)
-            from .encryption_utils import privacy_encryption
+            from encryption_utils import privacy_encryption
             
             for resume in resumes:
                 # Remove MongoDB _id for clean export
