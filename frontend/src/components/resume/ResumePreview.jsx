@@ -178,6 +178,98 @@ const ModernTemplate = ({ data }) => {
           ))}
         </section>
       )}
+
+      {/* Phase 9: Certifications */}
+      {data?.certifications?.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-1">
+            Certifications
+          </h2>
+          {data.certifications.map((cert, idx) => (
+            <div key={cert.id || idx} className="mb-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{cert.name}</h3>
+                  <p className="text-base font-medium text-gray-700">{cert.issuer}</p>
+                  {cert.credential_id && (
+                    <p className="text-sm text-gray-600">ID: {cert.credential_id}</p>
+                  )}
+                </div>
+                <span className="text-sm text-gray-600 whitespace-nowrap">
+                  {cert.issue_date}
+                  {cert.expiry_date && ` - ${cert.expiry_date}`}
+                </span>
+              </div>
+              {cert.credential_url && (
+                <a href={cert.credential_url} className="text-blue-600 hover:underline text-sm">
+                  View Credential
+                </a>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* Phase 9: References */}
+      {data?.references?.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-1">
+            References
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {data.references.map((ref, idx) => (
+              <div key={ref.id || idx} className="p-4 border border-gray-200 rounded-lg">
+                <h3 className="font-semibold text-gray-900">{ref.name}</h3>
+                <p className="text-gray-700">{ref.title}</p>
+                <p className="text-gray-600">{ref.company}</p>
+                {ref.email && <p className="text-sm text-gray-600">{ref.email}</p>}
+                {ref.phone && <p className="text-sm text-gray-600">{ref.phone}</p>}
+                {ref.relationship && (
+                  <p className="text-xs text-gray-500 mt-1">Relationship: {ref.relationship}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Phase 9: Personal Details */}
+      {data?.personal_details && (
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-1">
+            Personal Details
+          </h2>
+          <div className="space-y-3">
+            {data.personal_details.nationality && (
+              <div><span className="font-medium">Nationality:</span> {data.personal_details.nationality}</div>
+            )}
+            {data.personal_details.visa_status && (
+              <div><span className="font-medium">Visa Status:</span> {data.personal_details.visa_status}</div>
+            )}
+            {data.personal_details.languages?.length > 0 && (
+              <div>
+                <span className="font-medium">Languages:</span> {data.personal_details.languages.join(', ')}
+              </div>
+            )}
+            {data.personal_details.hobbies?.length > 0 && (
+              <div>
+                <span className="font-medium">Interests:</span> {data.personal_details.hobbies.join(', ')}
+              </div>
+            )}
+            {data.personal_details.volunteer_work && (
+              <div>
+                <span className="font-medium">Volunteer Work:</span> 
+                <p className="mt-1 text-gray-700">{data.personal_details.volunteer_work}</p>
+              </div>
+            )}
+            {data.personal_details.awards?.length > 0 && (
+              <div>
+                <span className="font-medium">Awards:</span> {data.personal_details.awards.join(', ')}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
