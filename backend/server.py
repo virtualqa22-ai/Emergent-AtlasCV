@@ -86,6 +86,10 @@ class Resume(BaseModel):
     education: List[ResumeEducation] = []
     projects: List[ResumeProject] = []
     extras: Dict[str, Any] = {}
+    # Template fields (Phase 6)
+    template_id: Optional[str] = None
+    template_config: Optional[Dict[str, Any]] = None
+    template_styling: Optional[Dict[str, Any]] = None
 
 class ResumeCreate(BaseModel):
     locale: Optional[str] = None
