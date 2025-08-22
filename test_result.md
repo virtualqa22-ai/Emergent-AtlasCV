@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Implement Phase 6 Template & Collaboration System: 5 built-in ATS-optimized templates, shareable links with permissions, comments and suggestions system for collaborative resume improvement."
+user_problem_statement: "Phase 6 Implementation: Templates, Accessibility, Collaboration - ATS-safe templates, WCAG 2.1 AA compliance, sharing for comments, suggestion mode, and change application workflow."
 
 backend:
   - task: "Add GET /api/templates endpoint - return 5 built-in templates"
