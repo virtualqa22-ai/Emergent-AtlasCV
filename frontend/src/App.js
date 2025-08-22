@@ -70,6 +70,14 @@ function Home() {
   const [validation, setValidation] = useState({ issues: [], locale: "IN" });
   const [showPrivacySettings, setShowPrivacySettings] = useState(false);
   const [cookieConsent, setCookieConsent] = useState(null);
+  
+  // Phase 8: Live Preview State
+  const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const [showPreview, setShowPreview] = useState(true);
+  const [previewMode, setPreviewMode] = useState('split'); // 'split', 'preview', 'edit'
+  
+  // Debounce form updates for smooth preview
+  const debouncedForm = useDebounce(form, 300);
 
   const handleChange = (path, value) => {
     setForm((prev) => {
