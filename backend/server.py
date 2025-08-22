@@ -46,6 +46,9 @@ class ResumeContact(BaseModel):
     country: str = "India"
     linkedin: str = ""
     website: str = ""
+    # Phase 9: Optional fields
+    photo_url: Optional[str] = None  # Photo URL or base64
+    date_of_birth: Optional[str] = None  # For locales that allow/require it
 
 class ResumeEducation(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
