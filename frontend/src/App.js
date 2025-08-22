@@ -862,6 +862,66 @@ function Home() {
               </div>
             )}
             
+            {/* Phase 9: Optional Fields Toggle */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="hidden lg:flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Fields
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Optional Fields for {optionalFieldsConfig.locale || form.locale}</DialogTitle>
+                  <DialogDescription>
+                    Toggle optional resume sections based on your locale preferences.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {Object.entries({
+                    photo: 'Photo',
+                    date_of_birth: 'Date of Birth',
+                    certifications: 'Certifications',
+                    references: 'References',
+                    personal_details: 'Personal Details',
+                    hobbies: 'Hobbies & Similar'
+                  }).map(([key, label]) => {
+                    const isAllowed = optionalFieldsConfig.optional_fields?.[key] !== false;
+                    const isVisible = visibleOptionalFields[key];
+                    
+                    return (
+                      <div key={key} className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <label className="text-sm font-medium">{label}</label>
+                          {!isAllowed && (
+                            <span className="text-xs text-red-600">Not recommended for this locale</span>
+                          )}
+                        </div>
+                        <Button
+                          variant={isVisible ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setVisibleOptionalFields(prev => ({
+                              ...prev,
+                              [key]: !prev[key]
+                            }));
+                          }}
+                          disabled={!isAllowed && key === 'photo'} // Disable photo if not allowed
+                        >
+                          {isVisible ? 'Shown' : 'Hidden'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <DialogFooter>
+                  <p className="text-xs text-gray-500">
+                    Settings are automatically adjusted based on your selected locale ({form.locale}).
+                  </p>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
             {/* Phase 8: Preview Controls */}
             <div className="hidden lg:flex items-center gap-1 border rounded">
               <Button
