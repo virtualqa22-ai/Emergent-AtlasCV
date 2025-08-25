@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "AtlasCV Auth Flow Change: Modify authentication from mandatory login to optional. Allow users to build resumes anonymously. Only prompt for authentication during import/export operations. Implement 1-month inactive user cleanup. Preserve anonymous resume data when transitioning to authenticated state."
+user_problem_statement: "AtlasCV Auth Flow Change: Modify authentication from mandatory login to optional. Users should see a proper homepage with tool selection menu first. Allow users to build resumes anonymously. Only prompt for authentication during import/export operations. Implement 1-month inactive user cleanup. Preserve anonymous resume data when transitioning to authenticated state. Create proper user flow: Homepage -> Tool Selection -> Specific Tool."
 
 # Auth Flow Modification Implementation Status
 backend:
