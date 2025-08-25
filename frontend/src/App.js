@@ -27,10 +27,23 @@ const LoadingScreen = () => (
 
 // Main App component - now handles both authenticated and anonymous users
 const AuthenticatedApp = ({ isAuthenticated, onAuthRequired, showAuthModal, onCloseAuthModal, authReason }) => {
-  const [activeTab, setActiveTab] = useState('resume-builder');
+  const [activeTab, setActiveTab] = useState('home'); // Start with home instead of resume-builder
+  const [showNavigation, setShowNavigation] = useState(false); // Control navigation visibility
 
-  const renderTool = () => {
+  const handleToolSelection = (toolId) => {
+    setActiveTab(toolId);
+    setShowNavigation(true); // Show navigation when a tool is selected
+  };
+
+  const handleBackToHome = () => {
+    setActiveTab('home');
+    setShowNavigation(false); // Hide navigation when going back to home
+  };
+
+  const renderContent = () => {
     switch (activeTab) {
+      case 'home':
+        return <HomePage onSelectTool={handleToolSelection} isAuthenticated={isAuthenticated} />;
       case 'resume-builder':
         return <ResumeBuilder isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
       case 'resume-checker':
@@ -40,20 +53,25 @@ const AuthenticatedApp = ({ isAuthenticated, onAuthRequired, showAuthModal, onCl
       case 'jd-verification':
         return <JDVerification isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
       default:
-        return <ResumeBuilder isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
+        return <HomePage onSelectTool={handleToolSelection} isAuthenticated={isAuthenticated} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-        isAuthenticated={isAuthenticated}
-        onAuthRequired={onAuthRequired}
-      />
+      {/* Show navigation only when not on home page */}
+      {showNavigation && (
+        <Navigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onBackToHome={handleBackToHome}
+          isAuthenticated={isAuthenticated}
+          onAuthRequired={onAuthRequired}
+        />
+      )}
+      
       <main>
-        {renderTool()}
+        {renderContent()}
       </main>
       
       {/* Auth Modal for Import/Export */}
@@ -64,16 +82,19 @@ const AuthenticatedApp = ({ isAuthenticated, onAuthRequired, showAuthModal, onCl
         />
       )}
       
-      <footer className="border-t bg-white/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-sm text-slate-600">
-          © {new Date().getFullYear()} AtlasCV. ATS-safe builder.
-          <span className="ml-4">
-            <a href="#privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
-            {" • "}
-            <a href="#terms" className="text-blue-600 hover:underline">Terms</a>
-          </span>
-        </div>
-      </footer>
+      {/* Footer - only show when not on home (home has its own footer) */}
+      {showNavigation && (
+        <footer className="border-t bg-white/70">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-sm text-slate-600">
+            © {new Date().getFullYear()} AtlasCV. ATS-safe builder.
+            <span className="ml-4">
+              <a href="#privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
+              {" • "}
+              <a href="#terms" className="text-blue-600 hover:underline">Terms</a>
+            </span>
+          </div>
+        </footer>
+      )}
     </div>
   );
 };
