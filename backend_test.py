@@ -5,12 +5,18 @@ from datetime import datetime
 import uuid
 
 class AtlasCVAPITester:
-    def __init__(self, base_url="https://verify-complete-1.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://None.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
         self.resume_id = None
         self.test_user_email = f"test-user-{uuid.uuid4().hex[:8]}@atlascv-test.com"
+        # Phase 10: Authentication test data
+        self.auth_token = None
+        self.auth_user_id = None
+        self.test_auth_email = "john.doe@atlascv.com"
+        self.test_auth_password = "atlascv123"
+        self.test_auth_name = "John Doe"
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
