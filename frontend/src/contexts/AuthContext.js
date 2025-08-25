@@ -19,6 +19,20 @@ export const AuthProvider = ({ children }) => {
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
   const API = `${BACKEND_URL}/api`;
 
+  // Anonymous resume data management
+  const saveAnonymousResume = (resumeData) => {
+    localStorage.setItem('atlascv_anonymous_resume', JSON.stringify(resumeData));
+  };
+
+  const getAnonymousResume = () => {
+    const data = localStorage.getItem('atlascv_anonymous_resume');
+    return data ? JSON.parse(data) : null;
+  };
+
+  const clearAnonymousResume = () => {
+    localStorage.removeItem('atlascv_anonymous_resume');
+  };
+
   // Set up axios interceptor to include token
   useEffect(() => {
     const interceptor = axios.interceptors.request.use(
