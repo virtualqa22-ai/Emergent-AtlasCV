@@ -58,7 +58,7 @@ export const Navigation = ({ activeTab, onTabChange }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="AtlasCV" className="h-8 w-8" />
+            <img src={LOGO_URL} alt="AtlasCV" className="h-25 w-25" style={{ height: '100px', width: '100px' }} />
             <span className="font-bold text-xl text-white">AtlasCV</span>
           </div>
 
