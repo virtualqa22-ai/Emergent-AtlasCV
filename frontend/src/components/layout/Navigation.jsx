@@ -92,42 +92,55 @@ export const Navigation = ({ activeTab, onTabChange, isAuthenticated, onAuthRequ
               {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
 
-            {/* User dropdown */}
-            <div className="relative">
-              <Button
-                variant="ghost"
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 text-white hover:bg-white/10"
-              >
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline text-sm">{user?.full_name || user?.email}</span>
-              </Button>
+            {/* Authentication State */}
+            {isAuthenticated ? (
+              /* Authenticated User Menu */
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 text-white hover:bg-white/10"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline text-sm">{user?.full_name || user?.email}</span>
+                </Button>
 
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                  <div className="py-1">
-                    <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                      <div className="font-medium">{user?.full_name}</div>
-                      <div className="text-gray-500">{user?.email}</div>
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                        <div className="font-medium">{user?.full_name}</div>
+                        <div className="text-gray-500">{user?.email}</div>
+                      </div>
+                      <button
+                        onClick={() => {/* TODO: Settings functionality */}}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {/* TODO: Settings functionality */}}
-                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </button>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              /* Anonymous User - Sign In Button */
+              <Button
+                variant="secondary"
+                onClick={() => onAuthRequired('general')}
+                className="bg-white/20 text-white hover:bg-white/30 border-white/20"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </div>
