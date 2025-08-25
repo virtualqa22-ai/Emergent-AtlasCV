@@ -14,7 +14,7 @@ class AtlasCVAPITester:
         # Phase 10: Authentication test data
         self.auth_token = None
         self.auth_user_id = None
-        self.test_auth_email = "john.doe@atlascv.com"
+        self.test_auth_email = f"john.doe-{uuid.uuid4().hex[:8]}@atlascv.com"
         self.test_auth_password = "atlascv123"
         self.test_auth_name = "John Doe"
 
