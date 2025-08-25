@@ -203,8 +203,14 @@ export const ResumeBuilder = ({ isAuthenticated, onAuthRequired }) => {
           const localScore = calculateLocalScore(form);
           setAts(localScore);
         }
+      } else if (!isAuthenticated) {
+        // Save to localStorage for anonymous users
+        saveAnonymousResume(form);
+        // Calculate local heuristic score for anonymous users
+        const localScore = calculateLocalScore(form);
+        setAts(localScore);
       } else {
-        // Save to server
+        // Save to server for authenticated users
         let idToScore = resumeId;
         if (!resumeId) {
           const { data } = await axios.post(`${API}/resumes`, form);
