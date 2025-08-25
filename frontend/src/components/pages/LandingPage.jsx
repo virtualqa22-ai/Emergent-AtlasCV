@@ -250,6 +250,78 @@ export const LandingPage = () => {
           </div>
         </section>
 
+        {/* Resume Templates Showcase */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16 animate-fade-in-up">
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+                Professional Resume Templates
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Choose from our collection of ATS-optimized templates designed by career experts
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left Column - Template Image */}
+              <div className="animate-slide-in-left">
+                <img 
+                  src="https://images.pexels.com/photos/4101343/pexels-photo-4101343.jpeg"
+                  alt="Professional Resume Templates"
+                  className="w-full h-96 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                />
+              </div>
+              
+              {/* Right Column - Template Features */}
+              <div className="space-y-6 animate-slide-in-right">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Multiple Template Styles
+                </h3>
+                <p className="text-lg text-gray-600">
+                  Our templates are designed to pass ATS systems while maintaining visual appeal. 
+                  Each template is optimized for different industries and career levels.
+                </p>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <div className="w-8 h-8 bg-blue-600 rounded"></div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">Modern</p>
+                  </div>
+                  <div className="text-center animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <div className="w-16 h-16 bg-teal-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <div className="w-8 h-8 bg-teal-600 rounded"></div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">Classic</p>
+                  </div>
+                  <div className="text-center animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <div className="w-8 h-8 bg-gray-600 rounded"></div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">Minimal</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <BadgeCheck className="h-5 w-5 text-teal-600" />
+                    <span className="text-gray-700">ATS-friendly formatting guaranteed</span>
+                  </div>
+                  <div className="flex items-center gap-3 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <Globe className="h-5 w-5 text-blue-600" />
+                    <span className="text-gray-700">Country-specific layout options</span>
+                  </div>
+                  <div className="flex items-center gap-3 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                    <Award className="h-5 w-5 text-yellow-600" />
+                    <span className="text-gray-700">Industry-optimized designs</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Benefits Section */}
         <section className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
