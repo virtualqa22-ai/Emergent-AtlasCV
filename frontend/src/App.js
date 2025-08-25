@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -13,47 +13,66 @@ import { ResumeChecker } from "./components/pages/ResumeChecker";
 import { CoverLetterBuilder } from "./components/pages/CoverLetterBuilder";
 import { JDVerification } from "./components/pages/JDVerification";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Loading component
+const LoadingScreen = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading AtlasCV...</p>
+    </div>
+  </div>
+);
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_cv-builder-26/artifacts/ionqa5az_AtlasCV_Logo_Transparent.png";
+// Authenticated App component
+const AuthenticatedApp = () => {
+  const [activeTab, setActiveTab] = useState('resume-builder');
 
-const defaultResumeIN = {
-  locale: "IN",
-  contact: { 
-    full_name: "", 
-    email: "", 
-    phone: "", 
-    city: "", 
-    state: "", 
-    country: "India", 
-    linkedin: "", 
-    website: "",
-    // Phase 9: Optional fields
-    photo_url: "",
-    date_of_birth: ""
-  },
-  summary: "",
-  skills: [],
-  experience: [],
-  education: [],
-  projects: [],
-  // Phase 9: New optional sections
-  certifications: [],
-  references: [],
-  personal_details: {
-    nationality: "",
-    visa_status: "",
-    languages: [],
-    hobbies: [],
-    volunteer_work: "",
-    awards: []
-  }
+  const renderTool = () => {
+    switch (activeTab) {
+      case 'resume-builder':
+        return <ResumeBuilder />;
+      case 'resume-checker':
+        return <ResumeChecker />;
+      case 'cover-letter':
+        return <CoverLetterBuilder />;
+      case 'jd-verification':
+        return <JDVerification />;
+      default:
+        return <ResumeBuilder />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <main>
+        {renderTool()}
+      </main>
+      
+      <footer className="border-t bg-white/70">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-sm text-slate-600">
+          © {new Date().getFullYear()} AtlasCV. ATS-safe builder.
+          <span className="ml-4">
+            <a href="#privacy" className="text-blue-600 hover:underline">Privacy Policy</a>
+            {" • "}
+            <a href="#terms" className="text-blue-600 hover:underline">Terms</a>
+          </span>
+        </div>
+      </footer>
+    </div>
+  );
 };
 
-function useResumeDraft() {
-  const [resumeId, setResumeId] = useState(() => localStorage.getItem("atlascv_resume_id") || "");
-  const { isLocalMode, saveLocalResume, getLocalResume } = useLocalOnlyMode();
+// App content with auth state handling
+const AppContent = () => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return isAuthenticated ? <AuthenticatedApp /> : <LandingPage />;
+};
   
   const remember = (id) => { 
     if (!isLocalMode) {
