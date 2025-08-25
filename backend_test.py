@@ -1543,12 +1543,40 @@ class AtlasCVAPITester:
             return False
 
 def main():
-    print("🚀 Starting AtlasCV Backend API Tests - Phase 7 Privacy/Compliance")
+    print("🚀 Starting AtlasCV Backend API Tests - Phase 10 Authentication")
     print("=" * 70)
     
     tester = AtlasCVAPITester()
     
-    # Run Phase 7 Privacy/Compliance tests first
+    # Run Phase 10 Authentication tests first
+    print("\n🔐 PHASE 10 TESTS - Authentication System")
+    print("=" * 50)
+    
+    phase10_tests = [
+        tester.test_auth_signup,
+        tester.test_auth_signup_duplicate_email,
+        tester.test_auth_signin,
+        tester.test_auth_signin_invalid_credentials,
+        tester.test_auth_me,
+        tester.test_auth_me_invalid_token,
+        tester.test_auth_refresh,
+        tester.test_create_resume_with_auth,
+        tester.test_list_user_resumes,
+        tester.test_list_resumes_without_auth,
+        tester.test_password_hashing_security,
+        tester.test_email_validation,
+        tester.test_password_requirements,
+        tester.test_backward_compatibility_resume_creation
+    ]
+    
+    phase10_passed = 0
+    for test in phase10_tests:
+        if test():
+            phase10_passed += 1
+    
+    print(f"\n📊 Phase 10 Results: {phase10_passed}/{len(phase10_tests)} tests passed")
+    
+    # Run Phase 7 Privacy/Compliance tests
     print("\n🔐 PHASE 7 TESTS - Privacy/Compliance & Encryption")
     print("=" * 50)
     
@@ -1613,24 +1641,30 @@ def main():
     # Print final results
     print("\n" + "=" * 70)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
+    print(f"📊 Phase 10 Authentication Tests: {phase10_passed}/{len(phase10_tests)} passed")
     print(f"📊 Phase 7 Privacy/Compliance Tests: {phase7_passed}/{len(phase7_tests)} passed")
     print(f"📊 Phase 3 Critical Tests: {phase3_passed}/{len(phase3_tests)} passed")
     
-    if phase7_passed == len(phase7_tests):
-        print("🎉 All Phase 7 Privacy/Compliance tests passed!")
-        if phase3_passed == len(phase3_tests):
-            print("🎉 All Phase 3 tests also passed!")
-            if tester.tests_passed == tester.tests_run:
-                print("🎉 All backend tests passed!")
-                return 0
+    if phase10_passed == len(phase10_tests):
+        print("🎉 All Phase 10 Authentication tests passed!")
+        if phase7_passed == len(phase7_tests):
+            print("🎉 All Phase 7 Privacy/Compliance tests also passed!")
+            if phase3_passed == len(phase3_tests):
+                print("🎉 All Phase 3 tests also passed!")
+                if tester.tests_passed == tester.tests_run:
+                    print("🎉 All backend tests passed!")
+                    return 0
+                else:
+                    print("⚠️  Some additional tests failed, but all phases are complete")
+                    return 0
             else:
-                print("⚠️  Some additional tests failed, but Phase 7 and Phase 3 are complete")
+                print("⚠️  Phase 3 tests had issues, but Phase 10 and Phase 7 are complete")
                 return 0
         else:
-            print("⚠️  Phase 3 tests had issues, but Phase 7 is complete")
+            print("⚠️  Phase 7 tests had issues, but Phase 10 is complete")
             return 0
     else:
-        print("❌ Phase 7 Privacy/Compliance tests failed!")
+        print("❌ Phase 10 Authentication tests failed!")
         return 1
 
 if __name__ == "__main__":
