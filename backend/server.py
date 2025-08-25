@@ -641,6 +641,17 @@ async def signin(user_credentials: UserSignin):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Update last login time and activity
+    current_time = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"email": user.email},
+        {"$set": {
+            "last_login_at": current_time,
+            "last_activity_at": current_time,
+            "updated_at": current_time
+        }}
+    )
+    
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
