@@ -23,31 +23,44 @@ const LoadingScreen = () => (
   </div>
 );
 
-// Authenticated App component
-const AuthenticatedApp = () => {
+// Main App component - now handles both authenticated and anonymous users
+const AuthenticatedApp = ({ isAuthenticated, onAuthRequired, showAuthModal, onCloseAuthModal, authReason }) => {
   const [activeTab, setActiveTab] = useState('resume-builder');
 
   const renderTool = () => {
     switch (activeTab) {
       case 'resume-builder':
-        return <ResumeBuilder />;
+        return <ResumeBuilder isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
       case 'resume-checker':
-        return <ResumeChecker />;
+        return <ResumeChecker isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
       case 'cover-letter':
-        return <CoverLetterBuilder />;
+        return <CoverLetterBuilder isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
       case 'jd-verification':
-        return <JDVerification />;
+        return <JDVerification isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
       default:
-        return <ResumeBuilder />;
+        return <ResumeBuilder isAuthenticated={isAuthenticated} onAuthRequired={onAuthRequired} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        isAuthenticated={isAuthenticated}
+        onAuthRequired={onAuthRequired}
+      />
       <main>
         {renderTool()}
       </main>
+      
+      {/* Auth Modal for Import/Export */}
+      {showAuthModal && (
+        <AuthModal 
+          reason={authReason}
+          onClose={onCloseAuthModal}
+        />
+      )}
       
       <footer className="border-t bg-white/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-sm text-slate-600">
