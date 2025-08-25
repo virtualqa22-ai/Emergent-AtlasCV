@@ -1385,8 +1385,19 @@ class AtlasCVAPITester:
         )
         
         if success:
-            print("   ✅ Unauthenticated request properly rejected")
+            print("   ✅ Unauthenticated request properly rejected (401)")
             return True
+        else:
+            # FastAPI might return 403 instead of 401 for missing auth header
+            success, response = self.run_test(
+                "List Resumes without Auth (403)",
+                "GET", 
+                "resumes",
+                403,
+            )
+            if success:
+                print("   ✅ Unauthenticated request properly rejected (403)")
+                return True
         return False
     
     def test_password_hashing_security(self):
