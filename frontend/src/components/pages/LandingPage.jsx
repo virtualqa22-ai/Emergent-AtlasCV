@@ -121,41 +121,54 @@ export const LandingPage = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2 bg-white/80 rounded-full px-4 py-2 border border-gray-200">
+                <div className="flex flex-wrap gap-4 animate-fade-in-delay">
+                  <div className="flex items-center gap-2 bg-white/90 rounded-full px-4 py-2 border border-gray-200 shadow-sm hover:shadow-md transition-shadow animate-float">
                     <BadgeCheck className="h-5 w-5 text-teal-600" />
                     <span className="text-sm font-medium">ATS-Optimized</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/80 rounded-full px-4 py-2 border border-gray-200">
+                  <div className="flex items-center gap-2 bg-white/90 rounded-full px-4 py-2 border border-gray-200 shadow-sm hover:shadow-md transition-shadow animate-float-delay">
                     <Globe className="h-5 w-5 text-blue-600" />
                     <span className="text-sm font-medium">9 Countries Supported</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/80 rounded-full px-4 py-2 border border-gray-200">
+                  <div className="flex items-center gap-2 bg-white/90 rounded-full px-4 py-2 border border-gray-200 shadow-sm hover:shadow-md transition-shadow animate-float-delay-2">
                     <Shield className="h-5 w-5 text-green-600" />
                     <span className="text-sm font-medium">Privacy-First</span>
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-6 pt-8">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold" style={{ color: '#1D4ED8' }}>98%</div>
+                <div className="grid grid-cols-3 gap-6 pt-8 animate-slide-up">
+                  <div className="text-center transform hover:scale-105 transition-transform">
+                    <div className="text-2xl font-bold animate-counter" style={{ color: '#1D4ED8' }}>98%</div>
                     <div className="text-sm text-gray-600">ATS Pass Rate</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold" style={{ color: '#16A34A' }}>9</div>
+                  <div className="text-center transform hover:scale-105 transition-transform">
+                    <div className="text-2xl font-bold animate-counter-delay" style={{ color: '#16A34A' }}>9</div>
                     <div className="text-sm text-gray-600">Country Formats</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold" style={{ color: '#1D4ED8' }}>3x</div>
+                  <div className="text-center transform hover:scale-105 transition-transform">
+                    <div className="text-2xl font-bold animate-counter-delay-2" style={{ color: '#1D4ED8' }}>3x</div>
                     <div className="text-sm text-gray-600">More Interviews</div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column - Auth Forms */}
-              <div className="lg:pl-8">
-                <AuthForms />
+              {/* Right Column - Hero Image + Auth Forms */}
+              <div className="lg:pl-8 space-y-8">
+                {/* Hero Image */}
+                <div className="relative animate-slide-in-right">
+                  <img 
+                    src="https://images.unsplash.com/photo-1586282391532-45d8e9902d1d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjByZXN1bWV8ZW58MHx8fGJsdWV8MTc1NjExOTE2N3ww&ixlib=rb-4.1.0&q=85"
+                    alt="Professional Resume Building"
+                    className="w-full h-64 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-teal-600/20 rounded-2xl"></div>
+                </div>
+                
+                {/* Auth Forms */}
+                <div className="animate-fade-in-delay">
+                  <AuthForms />
+                </div>
               </div>
             </div>
           </div>
