@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "AtlasCV Phase 8: Live Preview of Resume. Integrate real-time rendering engine with debounced updates, support different template styles with instant switching, and create responsive side-by-side editor (left: input, right: preview)."
+user_problem_statement: "AtlasCV Phase 9: Country-Specific Presets & Optional Fields. Expand locale support to include Canada, Singapore, UAE with proper optional field configurations. Implement backend schema for certifications, references, and personal details sections. Add locale-specific validation rules for photo requirements and nationality fields."
 
 backend:
   - task: "Implement field-level encryption for sensitive resume data"
