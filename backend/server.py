@@ -1058,6 +1058,72 @@ async def update_local_mode_settings(settings: LocalModeSettings):
         ]
     }
 
+# -----------------------
+# Account Cleanup Functions
+# -----------------------
+async def cleanup_inactive_users():
+    """Delete users and their data who have been inactive for more than 1 month"""
+    try:
+        # Calculate cutoff date (1 month ago)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
+        cutoff_iso = cutoff_date.isoformat()
+        
+        # Find inactive users
+        inactive_users_cursor = db.users.find({
+            "$or": [
+                {"last_activity_at": {"$lt": cutoff_iso}},
+                {"last_login_at": {"$lt": cutoff_iso}},
+                {"last_activity_at": None, "last_login_at": None, "created_at": {"$lt": cutoff_iso}}
+            ]
+        })
+        
+        deleted_users = 0
+        deleted_resumes = 0
+        
+        async for user in inactive_users_cursor:
+            user_id = user["id"]
+            user_email = user["email"]
+            
+            # Delete user's resumes
+            resume_result = await db.resumes.delete_many({
+                "$or": [
+                    {"user_id": user_id},
+                    {"user_email": user_email}
+                ]
+            })
+            deleted_resumes += resume_result.deleted_count
+            
+            # Delete user account
+            user_result = await db.users.delete_one({"id": user_id})
+            if user_result.deleted_count > 0:
+                deleted_users += 1
+                
+                # Log the cleanup action
+                await db.cleanup_log.insert_one({
+                    "action": "user_cleanup",
+                    "user_id": user_id,
+                    "user_email": user_email,
+                    "resumes_deleted": resume_result.deleted_count,
+                    "cleanup_date": datetime.now(timezone.utc).isoformat(),
+                    "reason": "inactive_for_1_month"
+                })
+        
+        logger.info(f"Cleanup completed: {deleted_users} users and {deleted_resumes} resumes deleted")
+        return {"deleted_users": deleted_users, "deleted_resumes": deleted_resumes}
+        
+    except Exception as e:
+        logger.error(f"Cleanup failed: {str(e)}")
+        raise e
+
+@api_router.post("/admin/cleanup-inactive-users")
+async def trigger_cleanup_inactive_users(current_user: User = Depends(get_current_active_user)):
+    """Trigger cleanup of inactive users (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await cleanup_inactive_users()
+    return result
+
 # Include the router in the main app
 app.include_router(api_router)
 
