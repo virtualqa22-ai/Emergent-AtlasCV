@@ -153,6 +153,9 @@ class Resume(BaseModel):
     locale: str = Field(default="IN")  # IN, US, EU, AU, JP-R, JP-S
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # Phase 10: User association (optional for backward compatibility)
+    user_id: Optional[str] = None
+    user_email: Optional[str] = None
     contact: ResumeContact = ResumeContact()
     summary: str = ""
     skills: List[str] = []
