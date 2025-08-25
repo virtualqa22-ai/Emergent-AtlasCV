@@ -977,8 +977,37 @@ export const ResumeBuilder = ({ isAuthenticated, onAuthRequired }) => {
               <Button className="btn-cta" onClick={validateLocale} variant="outline">
                 <ShieldCheck className="h-4 w-4" /> Validate preset
               </Button>
+              
+              {/* Import/Export with Auth Gates */}
+              <Button 
+                className="btn-cta" 
+                onClick={() => {
+                  if (isAuthenticated) {
+                    handleImport();
+                  } else {
+                    onAuthRequired('import');
+                  }
+                }}
+                variant="outline"
+              >
+                <Upload className="h-4 w-4" /> Import
+              </Button>
+              <Button 
+                className="btn-cta" 
+                onClick={() => {
+                  if (isAuthenticated) {
+                    handleExport();
+                  } else {
+                    onAuthRequired('export');
+                  }
+                }}
+                variant="outline"
+              >
+                <Download className="h-4 w-4" /> Export
+              </Button>
+              
               <Button className="btn-cta" onClick={saveResume} disabled={saving}>
-                <Save className="h-4 w-4" /> {saving ? "Saving..." : (isLocalMode ? "Save Local" : "Save Draft")}
+                <Save className="h-4 w-4" /> {saving ? "Saving..." : (isLocalMode ? "Save Local" : (isAuthenticated ? "Save" : "Save Draft"))}
               </Button>
             </div>
           </div>
