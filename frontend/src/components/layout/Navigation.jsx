@@ -10,7 +10,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Home
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_aa15cf1d-5e8b-4d06-9ed0-e8d4185d0366/artifacts/r6oihf5r_AtlasCV_Logo_Transparent.png";
