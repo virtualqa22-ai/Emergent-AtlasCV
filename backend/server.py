@@ -589,9 +589,20 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return User(**user.dict())
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
-    """Get current active user"""
+    """Get current active user and update activity timestamp"""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    
+    # Update last activity timestamp
+    current_time = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"email": current_user.email},
+        {"$set": {
+            "last_activity_at": current_time,
+            "updated_at": current_time
+        }}
+    )
+    
     return current_user
 
 # -----------------------
