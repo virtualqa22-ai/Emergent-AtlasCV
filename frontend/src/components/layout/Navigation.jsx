@@ -57,10 +57,20 @@ export const Navigation = ({ activeTab, onTabChange, onBackToHome, isAuthenticat
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50" style={{ backgroundColor: '#1D4ED8' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo and Home Button */}
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="AtlasCV" className="h-50 w-50" style={{ height: '200px', width: '200px' }} />
-            <span className="font-bold text-xl text-white">AtlasCV</span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xl text-white">AtlasCV</span>
+              <Button
+                variant="ghost"
+                onClick={onBackToHome}
+                className="text-white/80 hover:text-white hover:bg-white/10 ml-2"
+                title="Back to Home"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Desktop Navigation */}
