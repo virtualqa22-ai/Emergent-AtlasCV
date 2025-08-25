@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/pages/LandingPage";
 import { Navigation } from "./components/layout/Navigation";
+import { AuthModal } from "./components/auth/AuthModal";
 
 // Phase 10: Tool Pages
 import { ResumeBuilder } from "./components/pages/ResumeBuilder";
