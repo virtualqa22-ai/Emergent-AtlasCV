@@ -417,11 +417,17 @@ metadata:
 
 test_plan:
   current_focus:
-    []
+    - "Complete regression testing for Phase 9 implementation"
+    - "Test all optional fields functionality (certifications, references, personal details)"
+    - "Test locale switching and optional fields configuration"
+    - "Test live preview with all Phase 9 sections"
+    - "Verify Phase 8 live preview still works with Phase 9 additions"
+    - "Test Phase 7 privacy features integration"
+    - "Test core functionality (resume creation, ATS scoring, JD matching)"
   stuck_tasks:
     []
-  test_all: false
-  test_priority: "high_first"
+  test_all: true
+  test_priority: "regression_full"
 
 agent_communication:
   - agent: "main"
