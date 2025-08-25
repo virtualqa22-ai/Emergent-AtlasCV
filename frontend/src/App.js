@@ -66,12 +66,26 @@ const AuthenticatedApp = () => {
 // App content with auth state handling
 const AppContent = () => {
   const { isAuthenticated, loading } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authReason, setAuthReason] = useState(''); // 'import' or 'export'
 
   if (loading) {
     return <LoadingScreen />;
   }
 
-  return isAuthenticated ? <AuthenticatedApp /> : <LandingPage />;
+  // Always show the authenticated app (resume builder), but handle auth gates within
+  return (
+    <AuthenticatedApp 
+      isAuthenticated={isAuthenticated}
+      onAuthRequired={(reason) => {
+        setAuthReason(reason);
+        setShowAuthModal(true);
+      }}
+      showAuthModal={showAuthModal}
+      onCloseAuthModal={() => setShowAuthModal(false)}
+      authReason={authReason}
+    />
+  );
 };
 // Main App component
 function App() {
