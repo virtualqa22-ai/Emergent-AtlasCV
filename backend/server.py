@@ -860,8 +860,9 @@ async def get_locales():
     }
 
 @api_router.post("/resumes", response_model=Resume)
-async def create_resume(payload: ResumeCreate, request: Request, current_user: Optional[User] = None):
+async def create_resume(payload: ResumeCreate, request: Request):
     """Create a new resume. Associates with user if authenticated."""
+    current_user = None
     # Try to get current user if authorization header is present
     try:
         if request.headers.get("authorization"):
