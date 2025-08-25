@@ -144,7 +144,7 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "✅ IMPLEMENTED: Created Navigation component with Deep Blue (#1D4ED8) background and 4 tools: Resume Builder, Resume Checker (ATS Score), Cover Letter Builder, JD Verification. Includes responsive design, user dropdown menu, mobile navigation, and logout functionality."
+        comment: "✅ IMPLEMENTED: Created Navigation component with Deep Blue (#1D4ED8) background and 4 tools: Resume Builder, Resume Checker (ATS Score), Cover Letter Builder, JD Verification. Includes responsive design, user dropdown menu, mobile navigation, and logout functionality. Updated logo URL to correct asset and limited header logo size to 100x100px as requested."
   
   - task: "Create authentication context and routing"
     implemented: true
