@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Phase 10: Auth Components
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/pages/LandingPage";
+import { HomePage } from "./components/pages/HomePage";
 import { Navigation } from "./components/layout/Navigation";
 import { AuthModal } from "./components/auth/AuthModal";
 
