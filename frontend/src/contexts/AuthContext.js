@@ -149,7 +149,11 @@ export const AuthProvider = ({ children }) => {
     signup,
     logout,
     refreshToken,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    // Anonymous resume functions
+    saveAnonymousResume,
+    getAnonymousResume,
+    clearAnonymousResume
   };
 
   return (
