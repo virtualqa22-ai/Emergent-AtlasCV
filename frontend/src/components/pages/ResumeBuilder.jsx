@@ -76,7 +76,8 @@ function useResumeDraft() {
   return { resumeId, remember, clear, isLocalMode, saveLocalResume, getLocalResume };
 }
 
-export const ResumeBuilder = () => {
+export const ResumeBuilder = ({ isAuthenticated, onAuthRequired }) => {
+  const { saveAnonymousResume, getAnonymousResume } = useAuth();
   const { resumeId, remember, isLocalMode, saveLocalResume, getLocalResume } = useResumeDraft();
   const [locales, setLocales] = useState([]);
   const [presets, setPresets] = useState({});
