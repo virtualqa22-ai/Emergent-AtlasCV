@@ -7,9 +7,10 @@ import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Settings, Lock, Camera, Calendar, Award, Users, Globe, Heart } from "lucide-react";
+import { BadgeCheck, Save, UploadCloud, LayoutTemplate, FileText, Search, ShieldCheck, Settings, Lock, Camera, Calendar, Award, Users, Globe, Heart, Download, Upload } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Progress } from "../ui/progress";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Phase 7 Privacy Components
 import CookieConsentBanner from "../privacy/CookieConsentBanner";
