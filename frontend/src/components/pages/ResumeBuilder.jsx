@@ -155,11 +155,17 @@ export const ResumeBuilder = ({ isAuthenticated, onAuthRequired }) => {
   useEffect(() => {
     const boot = async () => {
       try {
-        // Load local data first if in local-only mode
+        // Load data based on user mode
         if (isLocalMode) {
           const localData = getLocalResume();
           if (localData) {
             setForm(localData);
+          }
+        } else if (!isAuthenticated) {
+          // Load anonymous data from localStorage
+          const anonymousData = getAnonymousResume();
+          if (anonymousData) {
+            setForm(anonymousData);
           }
         }
         
@@ -176,14 +182,14 @@ export const ResumeBuilder = ({ isAuthenticated, onAuthRequired }) => {
         await loadOptionalFieldsConfig(form.locale);
       } catch(e) { 
         console.error(e);
-        // If API fails and we're in local mode, still show UI
-        if (isLocalMode) {
-          console.log("Working in local-only mode due to API failure");
+        // If API fails, still show UI with limited functionality
+        if (isLocalMode || !isAuthenticated) {
+          console.log("Working in offline mode due to API failure");
         }
       }
     };
     boot();
-  }, [isLocalMode, getLocalResume]);
+  }, [isLocalMode, getLocalResume, isAuthenticated, getAnonymousResume]);
   
   // Phase 9: Update optional fields when locale changes
   useEffect(() => {
