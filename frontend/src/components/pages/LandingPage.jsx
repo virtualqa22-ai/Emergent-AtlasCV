@@ -215,8 +215,8 @@ export const LandingPage = () => {
               {/* Left Column - Technology Image */}
               <div className="animate-slide-in-left">
                 <img 
-                  src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwzfHx0ZWNobm9sb2d5fGVufDB8fHx8MTc1NjA3MjE0Nnww&ixlib=rb-4.1.0&q=85"
-                  alt="ATS Optimization Technology"
+                  src="https://images.unsplash.com/photo-1562564055-71e051d33c19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwyfHxkb2N1bWVudCUyMG1hbmFnZW1lbnR8ZW58MHx8fHwxNzU2MTIwNzc1fDA&ixlib=rb-4.1.0&q=85"
+                  alt="Professional Document Management & ATS Processing"
                   className="w-full h-80 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
                 />
               </div>
