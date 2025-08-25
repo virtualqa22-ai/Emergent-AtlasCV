@@ -238,6 +238,44 @@ export const ResumeBuilder = ({ isAuthenticated, onAuthRequired }) => {
     }
   };
 
+  // Handle import for authenticated users
+  const handleImport = async () => {
+    try {
+      const response = await axios.get(`${API}/resumes`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('atlascv_token')}` }
+      });
+      
+      if (response.data && response.data.length > 0) {
+        // For now, load the first resume. In the future, show a selection dialog
+        const latestResume = response.data[response.data.length - 1];
+        setForm(latestResume);
+        remember(latestResume.id);
+        
+        // Calculate score
+        if (latestResume.id) {
+          const { data: score } = await axios.post(`${API}/resumes/${latestResume.id}/score`);
+          setAts(score);
+        }
+      }
+    } catch (error) {
+      console.error('Import failed:', error);
+    }
+  };
+
+  // Handle export for authenticated users
+  const handleExport = () => {
+    // Export current resume as JSON
+    const dataStr = JSON.stringify(form, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `${form.contact?.full_name?.replace(/\s+/g, '_') || 'resume'}_atlascv.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   // Local scoring function for privacy mode
   const calculateLocalScore = (resumeData) => {
     let score = 100;
