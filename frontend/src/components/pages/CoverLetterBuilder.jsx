@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { MailOpen, FileText, Zap, Target } from 'lucide-react';
 
-export const CoverLetterBuilder = () => {
+export const CoverLetterBuilder = ({ isAuthenticated, onAuthRequired }) => {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
