@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "AtlasCV Phase 9: Country-Specific Presets & Optional Fields. Expand locale support to include Canada, Singapore, UAE with proper optional field configurations. Implement backend schema for certifications, references, and personal details sections. Add locale-specific validation rules for photo requirements and nationality fields."
+user_problem_statement: "AtlasCV Phase 10: Auth Module & UI Improvements. Implement email-based authentication system with JWT session handling. Create new landing/home page with auth forms. Design global navigation menu with 4 tools: Resume Builder, Resume Checker (ATS Score), Cover Letter Builder, JD Verification. Follow AtlasCV brand guidelines with Deep Blue navigation and Teal Green accents."
 
 backend:
   - task: "Implement field-level encryption for sensitive resume data"
