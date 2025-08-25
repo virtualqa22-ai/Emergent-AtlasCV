@@ -384,7 +384,7 @@ export const LandingPage = () => {
                       </div>
                     </div>
                     <p className="text-gray-700 italic">
-                      "AtlasCV helped me land my dream job at Google! The ATS optimization was incredible - I went from 0 responses to 5 interviews in just 2 weeks."
+                      "AtlasCV's ATS optimization was incredible! My resume score jumped from 45% to 96% and I got 5 interview calls in just 2 weeks. The real-time feedback helped me perfect every section."
                     </p>
                   </div>
                   
@@ -399,7 +399,7 @@ export const LandingPage = () => {
                       </div>
                     </div>
                     <p className="text-gray-700 italic">
-                      "The country-specific formats were a game-changer. Moving from Mexico to the US, AtlasCV made sure my resume met American standards perfectly."
+                      "The country-specific templates saved me hours! The US format was perfect for my job applications, and the ATS keyword suggestions were spot-on. Landed my dream job at Tesla!"
                     </p>
                   </div>
                   
@@ -414,7 +414,7 @@ export const LandingPage = () => {
                       </div>
                     </div>
                     <p className="text-gray-700 italic">
-                      "The real-time ATS scoring feature saved me hours. I could see exactly what needed to be improved and my resume score went from 65% to 94%!"
+                      "AtlasCV's live preview feature is amazing! I could see exactly how my resume would look to recruiters. The Modern template with ATS optimization helped me stand out from 200+ applicants."
                     </p>
                   </div>
                 </div>
