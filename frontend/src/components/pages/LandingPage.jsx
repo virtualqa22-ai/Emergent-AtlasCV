@@ -266,8 +266,8 @@ export const LandingPage = () => {
               {/* Left Column - Template Image */}
               <div className="animate-slide-in-left">
                 <img 
-                  src="https://images.pexels.com/photos/4101343/pexels-photo-4101343.jpeg"
-                  alt="Professional Resume Templates"
+                  src="https://images.unsplash.com/photo-1587287720754-94bac45f0bff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxyZXN1bWUlMjB0ZW1wbGF0ZXxlbnwwfHx8fDE3NTYxMjA3Njl8MA&ixlib=rb-4.1.0&q=85"
+                  alt="Professional Resume Templates & CV Formats"
                   className="w-full h-96 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
                 />
               </div>
