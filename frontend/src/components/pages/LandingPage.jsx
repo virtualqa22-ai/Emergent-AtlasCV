@@ -175,9 +175,9 @@ export const LandingPage = () => {
         </section>
 
         {/* Features Section */}
-        <section className="py-20 bg-white/50">
+        <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
+            <div className="text-center mb-16 animate-fade-in-up">
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 Comprehensive Career Tools
               </h2>
@@ -188,12 +188,12 @@ export const LandingPage = () => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {features.map((feature, index) => (
-                <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <Card key={index} className="border-0 shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:rotate-1 group animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
                   <CardHeader className="text-center pb-3">
-                    <div className="flex justify-center mb-4">
+                    <div className="flex justify-center mb-4 group-hover:animate-bounce">
                       {feature.icon}
                     </div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
+                    <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                       {feature.title}
                     </CardTitle>
                   </CardHeader>
@@ -208,10 +208,52 @@ export const LandingPage = () => {
           </div>
         </section>
 
-        {/* Benefits Section */}
-        <section className="py-20">
+        {/* Technology Showcase Section */}
+        <section className="py-20 bg-gradient-to-r from-blue-600 to-teal-600 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left Column - Technology Image */}
+              <div className="animate-slide-in-left">
+                <img 
+                  src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwzfHx0ZWNobm9sb2d5fGVufDB8fHx8MTc1NjA3MjE0Nnww&ixlib=rb-4.1.0&q=85"
+                  alt="ATS Optimization Technology"
+                  className="w-full h-80 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                />
+              </div>
+              
+              {/* Right Column - Content */}
+              <div className="space-y-6 animate-slide-in-right">
+                <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                  Advanced ATS Technology
+                </h2>
+                <p className="text-xl leading-relaxed opacity-90">
+                  Our AI-powered system analyzes your resume against real ATS algorithms, 
+                  ensuring maximum compatibility with hiring systems used by top companies.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse"></div>
+                    <span className="text-lg">Real-time ATS scoring and optimization</span>
+                  </div>
+                  <div className="flex items-center gap-3 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse"></div>
+                    <span className="text-lg">Keyword analysis and recommendations</span>
+                  </div>
+                  <div className="flex items-center gap-3 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                    <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse"></div>
+                    <span className="text-lg">Format compatibility verification</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Benefits Section */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16 animate-fade-in-up">
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 Why Choose AtlasCV?
               </h2>
