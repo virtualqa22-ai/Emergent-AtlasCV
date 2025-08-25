@@ -860,8 +860,27 @@ async def get_locales():
     }
 
 @api_router.post("/resumes", response_model=Resume)
-async def create_resume(payload: ResumeCreate):
+async def create_resume(payload: ResumeCreate, request: Request, current_user: Optional[User] = None):
+    """Create a new resume. Associates with user if authenticated."""
+    # Try to get current user if authorization header is present
+    try:
+        if request.headers.get("authorization"):
+            credentials = HTTPAuthorizationCredentials(
+                scheme="Bearer", 
+                credentials=request.headers.get("authorization").replace("Bearer ", "")
+            )
+            current_user = await get_current_user(credentials)
+    except:
+        # If auth fails, continue without user (for backward compatibility)
+        current_user = None
+    
     data = Resume(**{k: v for k, v in payload.dict(exclude_none=True).items()})
+    
+    # Associate with user if authenticated
+    if current_user:
+        data.user_id = current_user.id
+        data.user_email = current_user.email
+    
     ats = compute_heuristic_score(data)
     doc = data.dict()
     doc["ats"] = ats
