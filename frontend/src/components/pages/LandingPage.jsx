@@ -264,9 +264,9 @@ export const LandingPage = () => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start gap-4 p-6 bg-white/80 rounded-lg border border-gray-100">
+                <div key={index} className="flex items-start gap-4 p-6 bg-white/90 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105 animate-slide-up" style={{ animationDelay: `${index * 150}ms` }}>
                   <div 
-                    className="flex-shrink-0 p-2 rounded-md"
+                    className="flex-shrink-0 p-2 rounded-md animate-pulse"
                     style={{ backgroundColor: '#F0F9FF', color: '#1D4ED8' }}
                   >
                     {benefit.icon}
@@ -281,16 +281,94 @@ export const LandingPage = () => {
           </div>
         </section>
 
+        {/* Success Stories Section */}
+        <section className="py-20 bg-gradient-to-br from-teal-50 to-blue-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left Column - Success Image */}
+              <div className="animate-slide-in-left">
+                <img 
+                  src="https://images.pexels.com/photos/7616608/pexels-photo-7616608.jpeg"
+                  alt="Professional Success Story"
+                  className="w-full h-96 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                />
+              </div>
+              
+              {/* Right Column - Testimonials */}
+              <div className="space-y-8 animate-slide-in-right">
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
+                  Success Stories
+                </h2>
+                
+                <div className="space-y-6">
+                  <div className="bg-white/90 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold">
+                        S
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Sarah Chen</h4>
+                        <p className="text-sm text-gray-600">Software Engineer at Google</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 italic">
+                      "AtlasCV helped me land my dream job at Google! The ATS optimization was incredible - I went from 0 responses to 5 interviews in just 2 weeks."
+                    </p>
+                  </div>
+                  
+                  <div className="bg-white/90 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                        M
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Michael Rodriguez</h4>
+                        <p className="text-sm text-gray-600">Marketing Director at Tesla</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 italic">
+                      "The country-specific formats were a game-changer. Moving from Mexico to the US, AtlasCV made sure my resume met American standards perfectly."
+                    </p>
+                  </div>
+                  
+                  <div className="bg-white/90 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold">
+                        A
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Aisha Patel</h4>
+                        <p className="text-sm text-gray-600">Data Scientist at Microsoft</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 italic">
+                      "The real-time ATS scoring feature saved me hours. I could see exactly what needed to be improved and my resume score went from 65% to 94%!"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-r from-blue-600 to-teal-600">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+        <section className="py-20 bg-gradient-to-r from-blue-600 to-teal-600 relative overflow-hidden">
+          {/* Background Animation */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='white' fill-opacity='0.4'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundSize: '40px 40px'
+            }}></div>
+          </div>
+          
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 animate-fade-in-up">
               Ready to Build Your Perfect Resume?
             </h2>
-            <p className="text-xl text-blue-100 mb-8">
+            <p className="text-xl text-blue-100 mb-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               Join thousands of professionals who've landed their dream jobs with AtlasCV
             </p>
-            <div className="flex justify-center">
+            <div className="flex justify-center animate-fade-in-up" style={{ animationDelay: '400ms' }}>
               <AuthForms />
             </div>
           </div>
