@@ -891,6 +891,20 @@ async def create_resume(payload: ResumeCreate, request: Request, current_user: O
     
     return Resume(**data.dict())
 
+@api_router.get("/resumes", response_model=List[Resume])
+async def list_user_resumes(current_user: User = Depends(get_current_active_user)):
+    """List all resumes for the authenticated user"""
+    cursor = db.resumes.find({"user_id": current_user.id})
+    resumes = []
+    
+    async for doc in cursor:
+        # Decrypt sensitive data before returning
+        decrypted_data = privacy_encryption.decrypt_sensitive_data(doc)
+        resume = Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
+        resumes.append(resume)
+    
+    return resumes
+
 @api_router.put("/resumes/{resume_id}", response_model=Resume)
 async def update_resume(resume_id: str, payload: ResumeCreate):
     existing = await db.resumes.find_one({"id": resume_id})
