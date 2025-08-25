@@ -360,8 +360,8 @@ export const LandingPage = () => {
               {/* Left Column - Success Image */}
               <div className="animate-slide-in-left">
                 <img 
-                  src="https://images.pexels.com/photos/7616608/pexels-photo-7616608.jpeg"
-                  alt="Professional Success Story"
+                  src="https://images.unsplash.com/photo-1659355893430-1b4c1e5b3201?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxqb2IlMjBhcHBsaWNhdGlvbnxlbnwwfHx8Ymx1ZXwxNzU2MTIwNzI1fDA&ixlib=rb-4.1.0&q=85"
+                  alt="Professional Presenting Resume - Job Application Success"
                   className="w-full h-96 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
                 />
               </div>
