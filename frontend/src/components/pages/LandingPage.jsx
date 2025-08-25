@@ -92,22 +92,30 @@ export const LandingPage = () => {
 
       <main>
         {/* Hero Section */}
-        <section className="relative py-20 overflow-hidden">
+        <section className="relative py-20 overflow-hidden bg-gradient-to-br from-blue-50 to-teal-50">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231D4ED8' fill-opacity='0.4'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundSize: '60px 60px'
+            }}></div>
+          </div>
+          
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Left Column - Hero Content */}
-              <div className="space-y-8">
+              <div className="space-y-8 animate-fade-in-up">
                 <div className="space-y-4">
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight animate-slide-in-left">
                     Build Your
-                    <span className="block" style={{ color: '#1D4ED8' }}>
+                    <span className="block animate-bounce-in" style={{ color: '#1D4ED8' }}>
                       ATS-Optimized
                     </span>
-                    <span className="block" style={{ color: '#16A34A' }}>
+                    <span className="block animate-bounce-in-delay" style={{ color: '#16A34A' }}>
                       Resume
                     </span>
                   </h1>
-                  <p className="text-xl text-gray-600 leading-relaxed">
+                  <p className="text-xl text-gray-600 leading-relaxed animate-fade-in-delay">
                     Create professional resumes that pass Applicant Tracking Systems and land you more interviews. 
                     Built with country-specific formats and real-time ATS scoring.
                   </p>
