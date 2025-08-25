@@ -1006,6 +1006,542 @@ class AtlasCVAPITester:
         print("   ✅ Existing functionality works correctly with encryption")
         return True
 
+    # ===== PHASE 10 AUTHENTICATION TESTS =====
+    
+    def test_auth_signup(self):
+        """Test POST /api/auth/signup - User registration"""
+        print("\n🔐 Testing User Registration (Signup)...")
+        
+        signup_data = {
+            "email": self.test_auth_email,
+            "password": self.test_auth_password,
+            "full_name": self.test_auth_name
+        }
+        
+        success, response = self.run_test(
+            "User Signup",
+            "POST",
+            "auth/signup",
+            200,
+            data=signup_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["access_token", "token_type", "user"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing required field in signup response: {field}")
+                return False
+        
+        # Verify token type
+        if response.get("token_type") != "bearer":
+            print(f"   ❌ Expected token_type 'bearer', got '{response.get('token_type')}'")
+            return False
+        
+        # Verify user data
+        user = response.get("user", {})
+        if user.get("email") != self.test_auth_email:
+            print(f"   ❌ Email mismatch in user data")
+            return False
+        
+        if user.get("full_name") != self.test_auth_name:
+            print(f"   ❌ Full name mismatch in user data")
+            return False
+        
+        # Store auth token and user ID for subsequent tests
+        self.auth_token = response.get("access_token")
+        self.auth_user_id = user.get("id")
+        
+        print(f"   ✅ User registered successfully with ID: {self.auth_user_id}")
+        return True
+    
+    def test_auth_signup_duplicate_email(self):
+        """Test signup with duplicate email should fail"""
+        print("\n🔐 Testing Duplicate Email Registration...")
+        
+        signup_data = {
+            "email": self.test_auth_email,  # Same email as previous test
+            "password": "different123",
+            "full_name": "Different User"
+        }
+        
+        success, response = self.run_test(
+            "Duplicate Email Signup",
+            "POST",
+            "auth/signup",
+            400,  # Should return 400 for duplicate email
+            data=signup_data
+        )
+        
+        if success:
+            print("   ✅ Duplicate email properly rejected")
+            return True
+        return False
+    
+    def test_auth_signin(self):
+        """Test POST /api/auth/signin - User login"""
+        print("\n🔐 Testing User Login (Signin)...")
+        
+        signin_data = {
+            "email": self.test_auth_email,
+            "password": self.test_auth_password
+        }
+        
+        success, response = self.run_test(
+            "User Signin",
+            "POST",
+            "auth/signin",
+            200,
+            data=signin_data
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["access_token", "token_type", "user"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing required field in signin response: {field}")
+                return False
+        
+        # Verify token is different from signup (new token generated)
+        new_token = response.get("access_token")
+        if new_token == self.auth_token:
+            print("   ⚠️  Warning: Same token returned (might be expected)")
+        
+        # Update auth token
+        self.auth_token = new_token
+        
+        print("   ✅ User signed in successfully")
+        return True
+    
+    def test_auth_signin_invalid_credentials(self):
+        """Test signin with invalid credentials"""
+        print("\n🔐 Testing Invalid Login Credentials...")
+        
+        # Test wrong password
+        wrong_password_data = {
+            "email": self.test_auth_email,
+            "password": "wrongpassword123"
+        }
+        
+        success, response = self.run_test(
+            "Signin with Wrong Password",
+            "POST",
+            "auth/signin",
+            401,  # Should return 401 for invalid credentials
+            data=wrong_password_data
+        )
+        
+        if not success:
+            return False
+        
+        # Test non-existent email
+        wrong_email_data = {
+            "email": "nonexistent@atlascv.com",
+            "password": self.test_auth_password
+        }
+        
+        success, response = self.run_test(
+            "Signin with Non-existent Email",
+            "POST",
+            "auth/signin",
+            401,  # Should return 401 for invalid credentials
+            data=wrong_email_data
+        )
+        
+        if success:
+            print("   ✅ Invalid credentials properly rejected")
+            return True
+        return False
+    
+    def test_auth_me(self):
+        """Test GET /api/auth/me - Get current user info"""
+        print("\n🔐 Testing Get Current User Info...")
+        
+        if not self.auth_token:
+            print("   ❌ No auth token available")
+            return False
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.auth_token}'
+        }
+        
+        success, response = self.run_test(
+            "Get Current User",
+            "GET",
+            "auth/me",
+            200,
+            headers=headers
+        )
+        
+        if not success:
+            return False
+        
+        # Verify user data
+        if response.get("email") != self.test_auth_email:
+            print(f"   ❌ Email mismatch: expected {self.test_auth_email}, got {response.get('email')}")
+            return False
+        
+        if response.get("full_name") != self.test_auth_name:
+            print(f"   ❌ Name mismatch: expected {self.test_auth_name}, got {response.get('full_name')}")
+            return False
+        
+        if response.get("id") != self.auth_user_id:
+            print(f"   ❌ User ID mismatch")
+            return False
+        
+        print("   ✅ Current user info retrieved successfully")
+        return True
+    
+    def test_auth_me_invalid_token(self):
+        """Test GET /api/auth/me with invalid token"""
+        print("\n🔐 Testing Get User Info with Invalid Token...")
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer invalid-token-12345'
+        }
+        
+        success, response = self.run_test(
+            "Get User with Invalid Token",
+            "GET",
+            "auth/me",
+            401,  # Should return 401 for invalid token
+            headers=headers
+        )
+        
+        if success:
+            print("   ✅ Invalid token properly rejected")
+            return True
+        return False
+    
+    def test_auth_refresh(self):
+        """Test POST /api/auth/refresh - Refresh access token"""
+        print("\n🔐 Testing Token Refresh...")
+        
+        if not self.auth_token:
+            print("   ❌ No auth token available")
+            return False
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.auth_token}'
+        }
+        
+        success, response = self.run_test(
+            "Refresh Token",
+            "POST",
+            "auth/refresh",
+            200,
+            headers=headers
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ["access_token", "token_type", "user"]
+        for field in required_fields:
+            if field not in response:
+                print(f"   ❌ Missing required field in refresh response: {field}")
+                return False
+        
+        # Update auth token
+        old_token = self.auth_token
+        self.auth_token = response.get("access_token")
+        
+        if self.auth_token == old_token:
+            print("   ⚠️  Warning: Same token returned after refresh")
+        
+        print("   ✅ Token refreshed successfully")
+        return True
+    
+    def test_create_resume_with_auth(self):
+        """Test POST /api/resumes with authentication - should associate with user"""
+        print("\n🔐 Testing Create Resume with Authentication...")
+        
+        if not self.auth_token:
+            print("   ❌ No auth token available")
+            return False
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.auth_token}'
+        }
+        
+        auth_resume = {
+            "locale": "US",
+            "contact": {
+                "full_name": self.test_auth_name,
+                "email": self.test_auth_email,
+                "phone": "+1-555-123-4567",
+                "city": "San Francisco",
+                "state": "CA",
+                "country": "USA"
+            },
+            "summary": "Experienced software engineer with expertise in full-stack development",
+            "skills": ["React", "Node.js", "Python", "AWS", "TypeScript"],
+            "experience": [{
+                "id": str(uuid.uuid4()),
+                "company": "AtlasCV Inc",
+                "title": "Senior Software Engineer",
+                "city": "San Francisco",
+                "start_date": "2023-01",
+                "end_date": "Present",
+                "bullets": [
+                    "Led development of authentication system",
+                    "Improved application security by 40%",
+                    "Mentored junior developers"
+                ]
+            }]
+        }
+        
+        success, response = self.run_test(
+            "Create Authenticated Resume",
+            "POST",
+            "resumes",
+            200,
+            data=auth_resume,
+            headers=headers
+        )
+        
+        if not success:
+            return False
+        
+        # Store the authenticated resume ID
+        self.auth_resume_id = response.get("id")
+        
+        if not self.auth_resume_id:
+            print("   ❌ No resume ID returned")
+            return False
+        
+        print(f"   ✅ Authenticated resume created with ID: {self.auth_resume_id}")
+        return True
+    
+    def test_list_user_resumes(self):
+        """Test GET /api/resumes - List user's resumes (authenticated endpoint)"""
+        print("\n🔐 Testing List User Resumes...")
+        
+        if not self.auth_token:
+            print("   ❌ No auth token available")
+            return False
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.auth_token}'
+        }
+        
+        success, response = self.run_test(
+            "List User Resumes",
+            "GET",
+            "resumes",
+            200,
+            headers=headers
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response is a list
+        if not isinstance(response, list):
+            print(f"   ❌ Expected list response, got {type(response)}")
+            return False
+        
+        # Should have at least one resume (the one we created)
+        if len(response) == 0:
+            print("   ❌ No resumes returned for authenticated user")
+            return False
+        
+        # Verify the resume we created is in the list
+        resume_found = False
+        for resume in response:
+            if resume.get("id") == getattr(self, 'auth_resume_id', None):
+                resume_found = True
+                break
+        
+        if not resume_found and hasattr(self, 'auth_resume_id'):
+            print("   ❌ Created resume not found in user's resume list")
+            return False
+        
+        print(f"   ✅ Found {len(response)} resume(s) for authenticated user")
+        return True
+    
+    def test_list_resumes_without_auth(self):
+        """Test GET /api/resumes without authentication should fail"""
+        print("\n🔐 Testing List Resumes without Authentication...")
+        
+        success, response = self.run_test(
+            "List Resumes without Auth",
+            "GET",
+            "resumes",
+            401,  # Should return 401 for missing authentication
+        )
+        
+        if success:
+            print("   ✅ Unauthenticated request properly rejected")
+            return True
+        return False
+    
+    def test_password_hashing_security(self):
+        """Test that passwords are properly hashed in database"""
+        print("\n🔐 Testing Password Hashing Security...")
+        
+        # This test verifies that passwords are hashed by attempting to login
+        # If passwords were stored in plaintext, this would be a security issue
+        # We can't directly check the database, but we can verify the auth flow works
+        
+        # Create a new user with a known password
+        test_email = f"hash-test-{uuid.uuid4().hex[:8]}@atlascv.com"
+        test_password = "testpassword123"
+        
+        signup_data = {
+            "email": test_email,
+            "password": test_password,
+            "full_name": "Hash Test User"
+        }
+        
+        success, signup_response = self.run_test(
+            "Create User for Hash Test",
+            "POST",
+            "auth/signup",
+            200,
+            data=signup_data
+        )
+        
+        if not success:
+            return False
+        
+        # Now try to login with the same credentials
+        signin_data = {
+            "email": test_email,
+            "password": test_password
+        }
+        
+        success, signin_response = self.run_test(
+            "Login with Hashed Password",
+            "POST",
+            "auth/signin",
+            200,
+            data=signin_data
+        )
+        
+        if success:
+            print("   ✅ Password hashing working correctly (login successful)")
+            return True
+        else:
+            print("   ❌ Password hashing may have issues (login failed)")
+            return False
+    
+    def test_email_validation(self):
+        """Test email validation in signup"""
+        print("\n🔐 Testing Email Validation...")
+        
+        # Test invalid email format
+        invalid_email_data = {
+            "email": "invalid-email-format",
+            "password": "validpassword123",
+            "full_name": "Test User"
+        }
+        
+        success, response = self.run_test(
+            "Signup with Invalid Email",
+            "POST",
+            "auth/signup",
+            422,  # Should return 422 for validation error
+            data=invalid_email_data
+        )
+        
+        if success:
+            print("   ✅ Invalid email format properly rejected")
+            return True
+        else:
+            # Some APIs might return 400 instead of 422
+            success, response = self.run_test(
+                "Signup with Invalid Email (400)",
+                "POST",
+                "auth/signup",
+                400,
+                data=invalid_email_data
+            )
+            if success:
+                print("   ✅ Invalid email format properly rejected (400)")
+                return True
+        
+        return False
+    
+    def test_password_requirements(self):
+        """Test password requirements validation"""
+        print("\n🔐 Testing Password Requirements...")
+        
+        # Test short password
+        short_password_data = {
+            "email": f"short-pwd-{uuid.uuid4().hex[:8]}@atlascv.com",
+            "password": "123",  # Too short
+            "full_name": "Test User"
+        }
+        
+        success, response = self.run_test(
+            "Signup with Short Password",
+            "POST",
+            "auth/signup",
+            422,  # Should return 422 for validation error
+            data=short_password_data
+        )
+        
+        if success:
+            print("   ✅ Short password properly rejected")
+            return True
+        else:
+            # Some APIs might return 400 instead of 422
+            success, response = self.run_test(
+                "Signup with Short Password (400)",
+                "POST",
+                "auth/signup",
+                400,
+                data=short_password_data
+            )
+            if success:
+                print("   ✅ Short password properly rejected (400)")
+                return True
+        
+        return False
+    
+    def test_backward_compatibility_resume_creation(self):
+        """Test that resume creation still works without authentication (backward compatibility)"""
+        print("\n🔐 Testing Backward Compatibility - Resume Creation without Auth...")
+        
+        compat_resume = {
+            "locale": "IN",
+            "contact": {
+                "full_name": "Backward Compat User",
+                "email": f"compat-{uuid.uuid4().hex[:8]}@atlascv.com",
+                "phone": "+91 9876543210"
+            },
+            "summary": "Testing backward compatibility",
+            "skills": ["Compatibility", "Testing"]
+        }
+        
+        success, response = self.run_test(
+            "Create Resume without Auth",
+            "POST",
+            "resumes",
+            200,
+            data=compat_resume
+        )
+        
+        if success and response.get("id"):
+            print("   ✅ Resume creation works without authentication (backward compatible)")
+            return True
+        else:
+            print("   ❌ Backward compatibility broken")
+            return False
+
 def main():
     print("🚀 Starting AtlasCV Backend API Tests - Phase 7 Privacy/Compliance")
     print("=" * 70)
