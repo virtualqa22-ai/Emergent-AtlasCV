@@ -32,11 +32,54 @@ db = client[db_name]
 # Initialize GDPR compliance helper
 gdpr_compliance = GDPRCompliance(db)
 
+# -----------------------
+# Phase 10: Authentication Configuration
+# -----------------------
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
 # Create the main app without a prefix
 app = FastAPI(title="AtlasCV API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# -----------------------
+# Phase 10: Authentication Models
+# -----------------------
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    full_name: str = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    is_active: bool = True
+    role: str = "user"  # "user" or "admin"
+
+class UserInDB(User):
+    hashed_password: str
+
+class UserSignup(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    full_name: str = Field(..., min_length=1)
+
+class UserSignin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
 
 # -----------------------
 # Pydantic Models
