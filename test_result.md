@@ -511,13 +511,16 @@ metadata:
 test_plan:
   current_focus:
     - "Test Phase 10 auth system functionality"
-    - "Test landing page and auth forms (login/signup)"
+    - "Test visually enhanced landing page with images and animations"
+    - "Test auth forms (login/signup) with new visual design"
     - "Test navigation between 4 tools"
     - "Test authentication flow and JWT token handling" 
     - "Test Resume Builder functionality after restructure"
     - "Test Resume Checker standalone tool"
     - "Verify brand guidelines compliance (Deep Blue nav, Teal Green accents)"
     - "Test responsive design and mobile navigation"
+    - "Verify logo size limit (100x100px)"
+    - "Test visual enhancements: animations, images, testimonials"
   stuck_tasks:
     []
   test_all: false
