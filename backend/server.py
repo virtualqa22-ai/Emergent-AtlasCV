@@ -663,14 +663,18 @@ async def signin(user_credentials: UserSignin):
         }}
     )
     
+    # Fetch updated user data to return with timestamps
+    updated_user_data = await db.users.find_one({"email": user.email})
+    updated_user = UserInDB(**updated_user_data)
+    
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     
-    # Return token and user info
-    user_response = User(**user.dict())
+    # Return token and updated user info
+    user_response = User(**updated_user.dict())
     return Token(access_token=access_token, token_type="bearer", user=user_response)
 
 @api_router.get("/auth/me", response_model=User)
