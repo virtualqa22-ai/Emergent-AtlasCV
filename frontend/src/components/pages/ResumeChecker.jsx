@@ -9,7 +9,7 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-export const ResumeChecker = () => {
+export const ResumeChecker = ({ isAuthenticated, onAuthRequired }) => {
   const [resumeText, setResumeText] = useState('');
   const [ats, setAts] = useState({ score: 0, hints: [] });
   const [loading, setLoading] = useState(false);
