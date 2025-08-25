@@ -158,8 +158,8 @@ export const LandingPage = () => {
                 {/* Hero Image */}
                 <div className="relative animate-slide-in-right">
                   <img 
-                    src="https://images.unsplash.com/photo-1586282391532-45d8e9902d1d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjByZXN1bWV8ZW58MHx8fGJsdWV8MTc1NjExOTE2N3ww&ixlib=rb-4.1.0&q=85"
-                    alt="Professional Resume Building"
+                    src="https://images.unsplash.com/photo-1658203897415-3cad6cfad5c0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxkb2N1bWVudCUyMGVkaXRpbmd8ZW58MHx8fGJsdWV8MTc1NjEyMDcxMXww&ixlib=rb-4.1.0&q=85"
+                    alt="Resume Builder - Document Editing Tool"
                     className="w-full h-64 object-cover rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-teal-600/20 rounded-2xl"></div>
