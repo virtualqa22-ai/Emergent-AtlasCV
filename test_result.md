@@ -132,7 +132,7 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "✅ IMPLEMENTED: Created comprehensive landing page with auth forms, hero section, features overview, benefits section, and brand-compliant styling. Includes AuthForms component with login/signup tabs, input validation, and error handling. Uses AtlasCV brand colors (Deep Blue #1D4ED8, Teal Green #16A34A)."
+        comment: "✅ IMPLEMENTED: Created comprehensive landing page with auth forms, hero section, features overview, benefits section, and brand-compliant styling. Includes AuthForms component with login/signup tabs, input validation, and error handling. Uses AtlasCV brand colors (Deep Blue #1D4ED8, Teal Green #16A34A). Updated logo URL to correct asset and limited size to 100x100px as requested."
   
   - task: "Implement global navigation with 4 tools menu"
     implemented: true
