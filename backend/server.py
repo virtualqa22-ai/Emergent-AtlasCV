@@ -523,6 +523,147 @@ def tokenize(text: str) -> List[str]:
     parts = [p for p in parts if p and p not in STOPWORDS and len(p) > 1]
     return parts
 
+# -----------------------
+# Phase 10: Authentication Utilities
+# -----------------------
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plaintext password against its hash"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    """Hash a password for storing in database"""
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT access token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_user(email: str) -> Optional[UserInDB]:
+    """Get user from database by email"""
+    user_data = await db.users.find_one({"email": email})
+    if user_data:
+        return UserInDB(**user_data)
+    return None
+
+async def authenticate_user(email: str, password: str) -> Optional[UserInDB]:
+    """Authenticate user with email and password"""
+    user = await get_user(email)
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+    """Get current user from JWT token"""
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except jwt.PyJWTError:
+        raise credentials_exception
+        
+    user = await get_user(email=token_data.email)
+    if user is None:
+        raise credentials_exception
+    return User(**user.dict())
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    """Get current active user"""
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+# -----------------------
+# Phase 10: Authentication API Endpoints
+# -----------------------
+@api_router.post("/auth/signup", response_model=Token)
+async def signup(user_data: UserSignup):
+    """Register a new user"""
+    # Check if user already exists
+    existing_user = await get_user(user_data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="User with this email already exists"
+        )
+    
+    # Hash password and create user
+    hashed_password = get_password_hash(user_data.password)
+    user_in_db = UserInDB(
+        email=user_data.email,
+        full_name=user_data.full_name,
+        hashed_password=hashed_password
+    )
+    
+    # Save to database
+    user_dict = user_in_db.dict()
+    await db.users.insert_one(user_dict)
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user_data.email}, expires_delta=access_token_expires
+    )
+    
+    # Return token and user info
+    user = User(**user_in_db.dict())
+    return Token(access_token=access_token, token_type="bearer", user=user)
+
+@api_router.post("/auth/signin", response_model=Token)
+async def signin(user_credentials: UserSignin):
+    """Authenticate user and return token"""
+    user = await authenticate_user(user_credentials.email, user_credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    # Return token and user info
+    user_response = User(**user.dict())
+    return Token(access_token=access_token, token_type="bearer", user=user_response)
+
+@api_router.get("/auth/me", response_model=User)
+async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+    """Get current user information"""
+    return current_user
+
+@api_router.post("/auth/refresh", response_model=Token)
+async def refresh_token(current_user: User = Depends(get_current_active_user)):
+    """Refresh access token"""
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.email}, expires_delta=access_token_expires
+    )
+    
+    return Token(access_token=access_token, token_type="bearer", user=current_user)
+
+# -----------------------
+# JD Processing API
+# -----------------------
 @api_router.post("/jd/parse", response_model=JDParseResult)
 async def parse_jd(input: JDParseInput):
     parts = tokenize(input.text)
