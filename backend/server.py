@@ -1,15 +1,24 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
+import jwt
+from passlib.context import CryptContext
+from passlib.hash import bcrypt
+
+# Import our privacy utilities
+from encryption_utils import privacy_encryption
+from gdpr_utils import GDPRCompliance
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -20,11 +29,59 @@ client = AsyncIOMotorClient(mongo_url)
 db_name = os.environ.get('DB_NAME', 'test_database')
 db = client[db_name]
 
+# Initialize GDPR compliance helper
+gdpr_compliance = GDPRCompliance(db)
+
+# -----------------------
+# Phase 10: Authentication Configuration
+# -----------------------
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
 # Create the main app without a prefix
 app = FastAPI(title="AtlasCV API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# -----------------------
+# Phase 10: Authentication Models
+# -----------------------
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    full_name: str = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    last_login_at: Optional[str] = None
+    last_activity_at: Optional[str] = None
+    is_active: bool = True
+    role: str = "user"  # "user" or "admin"
+
+class UserInDB(User):
+    hashed_password: str
+
+class UserSignup(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    full_name: str = Field(..., min_length=1)
+
+class UserSignin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
 
 # -----------------------
 # Pydantic Models
@@ -38,6 +95,9 @@ class ResumeContact(BaseModel):
     country: str = "India"
     linkedin: str = ""
     website: str = ""
+    # Phase 9: Optional fields
+    photo_url: Optional[str] = None  # Photo URL or base64
+    date_of_birth: Optional[str] = None  # For locales that allow/require it
 
 class ResumeEducation(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -63,17 +123,51 @@ class ResumeProject(BaseModel):
     tech: List[str] = []
     link: str = ""
 
+# Phase 9: New optional sections
+class ResumeCertification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    issuer: str = ""
+    issue_date: str = ""
+    expiry_date: Optional[str] = None
+    credential_id: str = ""
+    credential_url: str = ""
+
+class ResumeReference(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    title: str = ""
+    company: str = ""
+    email: str = ""
+    phone: str = ""
+    relationship: str = ""  # "Manager", "Colleague", "Professor", etc.
+
+class ResumePersonalDetail(BaseModel):
+    nationality: str = ""
+    visa_status: str = ""
+    languages: List[str] = []
+    hobbies: List[str] = []
+    volunteer_work: str = ""
+    awards: List[str] = []
+
 class Resume(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     locale: str = Field(default="IN")  # IN, US, EU, AU, JP-R, JP-S
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # Phase 10: User association (optional for backward compatibility)
+    user_id: Optional[str] = None
+    user_email: Optional[str] = None
     contact: ResumeContact = ResumeContact()
     summary: str = ""
     skills: List[str] = []
     experience: List[ResumeExperience] = []
     education: List[ResumeEducation] = []
     projects: List[ResumeProject] = []
+    # Phase 9: Optional sections
+    certifications: List[ResumeCertification] = []
+    references: List[ResumeReference] = []
+    personal_details: Optional[ResumePersonalDetail] = None
     extras: Dict[str, Any] = {}
 
 class ResumeCreate(BaseModel):
@@ -84,6 +178,10 @@ class ResumeCreate(BaseModel):
     experience: Optional[List[ResumeExperience]] = None
     education: Optional[List[ResumeEducation]] = None
     projects: Optional[List[ResumeProject]] = None
+    # Phase 9: Optional sections
+    certifications: Optional[List[ResumeCertification]] = None
+    references: Optional[List[ResumeReference]] = None
+    personal_details: Optional[ResumePersonalDetail] = None
     extras: Optional[Dict[str, Any]] = None
 
 class ResumeUpdate(ResumeCreate):
@@ -121,71 +219,220 @@ class ValidateResult(BaseModel):
     locale: str
 
 # -----------------------
+# GDPR and Privacy Models
+# -----------------------
+class PrivacyConsentInput(BaseModel):
+    user_identifier: str
+    has_consent: bool = True
+    version: str = "1.0"
+    consent_types: List[str] = ["functional"]
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+class PrivacyConsentResult(BaseModel):
+    user_identifier: str
+    has_consent: bool
+    consent_date: Optional[str]
+    consent_version: str
+    consent_types: List[str]
+
+class DataExportRequest(BaseModel):
+    user_identifier: str  # email or resume ID
+    format: str = "json"  # json, csv (future)
+
+class DataDeletionRequest(BaseModel):
+    user_identifier: str  # email or resume ID
+    confirmation_token: Optional[str] = None
+    reason: Optional[str] = None
+
+class LocalModeSettings(BaseModel):
+    enabled: bool = False
+    encrypt_local_data: bool = True
+    auto_clear_after_hours: int = 24
+
+# -----------------------
 # Presets (field order, labels, date formats)
 # -----------------------
 PRESETS: Dict[str, Dict[str, Any]] = {
     "US": {
         "label": "United States",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications"],
         "labels": {"experience": "Work Experience", "education": "Education"},
+        "optional_fields": {
+            "photo": False,  # Not allowed
+            "date_of_birth": False,  # Not recommended
+            "certifications": True,
+            "references": True,  # "Available upon request" is standard
+            "personal_details": False,
+            "hobbies": False
+        },
         "rules": [
             "No photo in resume",
             "Show city and state in Contact",
             "Use Month-Year dates (e.g., 2024-05)",
+            "References available upon request",
+        ],
+    },
+    "CA": {
+        "label": "Canada",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications"],
+        "labels": {"experience": "Work Experience", "education": "Education"},
+        "optional_fields": {
+            "photo": False,  # Not recommended
+            "date_of_birth": False,  # Prohibited for discrimination prevention
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Languages are important in Canada
+            "hobbies": False
+        },
+        "rules": [
+            "No photo required",
+            "Bilingual capabilities (English/French) important",
+            "Work permit status may be mentioned",
+            "Include relevant certifications",
         ],
     },
     "EU": {
         "label": "European Union (Europass)",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
         "labels": {"experience": "Experience", "education": "Education (Europass)"},
+        "optional_fields": {
+            "photo": True,  # Optional but common
+            "date_of_birth": True,  # Common in many EU countries
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Nationality, languages important
+            "hobbies": True  # Personal interests section common
+        },
         "rules": [
             "GDPR-friendly contact (avoid DOB unless asked)",
             "Optional photo toggle",
+            "Languages section important for EU mobility",
+            "Europass format compatibility",
         ],
     },
     "AU": {
         "label": "Australia",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "experience", "skills", "education", "projects"],
-        "labels": {"experience": "Employment History"},
+        "section_order": ["profile", "jd", "summary", "experience", "skills", "education", "projects", "certifications", "references"],
+        "labels": {"experience": "Employment History", "references": "Referees"},
+        "optional_fields": {
+            "photo": False,  # Not recommended
+            "date_of_birth": False,  # Not recommended
+            "certifications": True,
+            "references": True,  # Referees are standard
+            "personal_details": True,  # Visa status important
+            "hobbies": True  # Interests section common
+        },
         "rules": [
             "2–3 pages acceptable",
-            "Referees optional",
+            "Referees expected (usually 2-3)",
             "No photo",
             "Right-to-work statement optional",
+            "Include visa status if relevant",
         ],
     },
     "IN": {
         "label": "India",
         "date_format": "YYYY-MM",
-        "section_order": ["profile", "jd", "summary", "skills", "experience", "projects", "education"],
+        "section_order": ["profile", "jd", "summary", "skills", "experience", "projects", "education", "certifications", "personal_details"],
         "labels": {"experience": "Experience", "projects": "Projects (important)"},
+        "optional_fields": {
+            "photo": True,  # Optional but common
+            "date_of_birth": True,  # Common in Indian resumes
+            "certifications": True,
+            "references": False,  # Not standard practice
+            "personal_details": True,  # Languages, nationality important
+            "hobbies": True  # Personal interests common
+        },
         "rules": [
             "Phone should include country code (e.g., +91)",
             "Projects/internships prominent",
+            "Certifications highly valued",
+            "Personal details section standard",
         ],
     },
     "JP-R": {
         "label": "Japan — Rirekisho",
         "date_format": "YYYY/MM",
-        "section_order": ["profile", "summary", "experience", "education", "skills", "projects"],
+        "section_order": ["profile", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
         "labels": {"experience": "職歴 (Shokureki)", "education": "学歴 (Gakureki)"},
+        "optional_fields": {
+            "photo": True,  # Standard requirement
+            "date_of_birth": True,  # Required
+            "certifications": True,
+            "references": False,  # Not standard
+            "personal_details": True,  # Personal info important
+            "hobbies": True  # 趣味 (Shumi) section standard
+        },
         "rules": [
             "Structured, chronological",
             "Kana name field recommended",
-            "Optional photo toggle (default OFF)",
+            "Photo required (default ON)",
+            "Date of birth standard",
+            "Personal details section expected",
         ],
     },
     "JP-S": {
         "label": "Japan — Shokumu Keirekisho",
         "date_format": "YYYY/MM",
-        "section_order": ["profile", "summary", "skills", "projects", "experience", "education"],
+        "section_order": ["profile", "summary", "skills", "projects", "experience", "education", "certifications"],
         "labels": {"experience": "職務経歴", "skills": "スキルマトリクス"},
+        "optional_fields": {
+            "photo": False,  # Less common in skills-focused resume
+            "date_of_birth": False,
+            "certifications": True,
+            "references": False,
+            "personal_details": False,
+            "hobbies": False
+        },
         "rules": [
             "Narrative achievements",
             "Skills matrix and project details",
+            "Focus on accomplishments over personal info",
+        ],
+    },
+    "SG": {
+        "label": "Singapore",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
+        "labels": {"experience": "Work Experience", "education": "Education"},
+        "optional_fields": {
+            "photo": True,  # Optional but common
+            "date_of_birth": True,  # Common practice
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Languages, nationality important
+            "hobbies": False
+        },
+        "rules": [
+            "Multilingual capabilities important",
+            "Work permit status relevant",
+            "Include relevant certifications",
+            "Regional experience valued",
+        ],
+    },
+    "AE": {
+        "label": "United Arab Emirates",
+        "date_format": "YYYY-MM",
+        "section_order": ["profile", "jd", "summary", "experience", "education", "skills", "projects", "certifications", "personal_details"],
+        "labels": {"experience": "Professional Experience", "education": "Educational Background"},
+        "optional_fields": {
+            "photo": True,  # Common practice
+            "date_of_birth": True,
+            "certifications": True,
+            "references": True,
+            "personal_details": True,  # Nationality, visa status crucial
+            "hobbies": False
+        },
+        "rules": [
+            "Visa status and nationality important",
+            "Arabic/English language skills valued",
+            "Regional/international experience highlighted",
+            "Professional certifications important",
         ],
     },
 }
@@ -281,6 +528,173 @@ def tokenize(text: str) -> List[str]:
     parts = [p for p in parts if p and p not in STOPWORDS and len(p) > 1]
     return parts
 
+# -----------------------
+# Phase 10: Authentication Utilities
+# -----------------------
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plaintext password against its hash"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    """Hash a password for storing in database"""
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT access token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_user(email: str) -> Optional[UserInDB]:
+    """Get user from database by email"""
+    user_data = await db.users.find_one({"email": email})
+    if user_data:
+        return UserInDB(**user_data)
+    return None
+
+async def authenticate_user(email: str, password: str) -> Optional[UserInDB]:
+    """Authenticate user with email and password"""
+    user = await get_user(email)
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+    """Get current user from JWT token"""
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except jwt.PyJWTError:
+        raise credentials_exception
+        
+    user = await get_user(email=token_data.email)
+    if user is None:
+        raise credentials_exception
+    return User(**user.dict())
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    """Get current active user and update activity timestamp"""
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    
+    # Update last activity timestamp
+    current_time = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"email": current_user.email},
+        {"$set": {
+            "last_activity_at": current_time,
+            "updated_at": current_time
+        }}
+    )
+    
+    return current_user
+
+# -----------------------
+# Phase 10: Authentication API Endpoints
+# -----------------------
+@api_router.post("/auth/signup", response_model=Token)
+async def signup(user_data: UserSignup):
+    """Register a new user"""
+    # Check if user already exists
+    existing_user = await get_user(user_data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="User with this email already exists"
+        )
+    
+    # Hash password and create user
+    hashed_password = get_password_hash(user_data.password)
+    user_in_db = UserInDB(
+        email=user_data.email,
+        full_name=user_data.full_name,
+        hashed_password=hashed_password
+    )
+    
+    # Save to database
+    user_dict = user_in_db.dict()
+    await db.users.insert_one(user_dict)
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user_data.email}, expires_delta=access_token_expires
+    )
+    
+    # Return token and user info
+    user = User(**user_in_db.dict())
+    return Token(access_token=access_token, token_type="bearer", user=user)
+
+@api_router.post("/auth/signin", response_model=Token)
+async def signin(user_credentials: UserSignin):
+    """Authenticate user and return token"""
+    user = await authenticate_user(user_credentials.email, user_credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Update last login time and activity
+    current_time = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"email": user.email},
+        {"$set": {
+            "last_login_at": current_time,
+            "last_activity_at": current_time,
+            "updated_at": current_time
+        }}
+    )
+    
+    # Fetch updated user data to return with timestamps
+    updated_user_data = await db.users.find_one({"email": user.email})
+    updated_user = UserInDB(**updated_user_data)
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    # Return token and updated user info
+    user_response = User(**updated_user.dict())
+    return Token(access_token=access_token, token_type="bearer", user=user_response)
+
+@api_router.get("/auth/me", response_model=User)
+async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+    """Get current user information"""
+    return current_user
+
+@api_router.post("/auth/refresh", response_model=Token)
+async def refresh_token(current_user: User = Depends(get_current_active_user)):
+    """Refresh access token"""
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.email}, expires_delta=access_token_expires
+    )
+    
+    return Token(access_token=access_token, token_type="bearer", user=current_user)
+
+# -----------------------
+# JD Processing API
+# -----------------------
 @api_router.post("/jd/parse", response_model=JDParseResult)
 async def parse_jd(input: JDParseInput):
     parts = tokenize(input.text)
@@ -370,11 +784,26 @@ async def get_preset(code: str):
         raise HTTPException(status_code=404, detail="Preset not found")
     return {"code": code, **PRESETS[code]}
 
+@api_router.get("/presets/{code}/optional-fields")
+async def get_optional_fields(code: str):
+    """Get optional field configuration for a specific locale"""
+    if code not in PRESETS:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    
+    preset = PRESETS[code]
+    return {
+        "locale": code,
+        "optional_fields": preset.get("optional_fields", {}),
+        "section_order": preset.get("section_order", []),
+        "labels": preset.get("labels", {})
+    }
+
 @api_router.post("/validate", response_model=ValidateResult)
 async def validate_resume(input: ValidateInput):
     r = input.resume
     code = r.locale if r.locale in PRESETS else "IN"
     preset = PRESETS[code]
+    optional_fields = preset.get("optional_fields", {})
     issues: List[str] = []
 
     # date format suggestion check
@@ -398,16 +827,40 @@ async def validate_resume(input: ValidateInput):
         if ed.end_date and not check_date(ed.end_date):
             issues.append(f"Use {date_fmt} for end_date in education")
 
+    # Phase 9: Optional field validations based on locale
+    if r.contact.photo_url and not optional_fields.get("photo", True):
+        issues.append(f"Photos are not recommended for {preset['label']} resumes")
+    
+    if r.contact.date_of_birth and not optional_fields.get("date_of_birth", True):
+        issues.append(f"Date of birth not recommended for {preset['label']} resumes")
+    
+    # Japanese resumes typically require photo if JP-R
+    if code == "JP-R" and not r.contact.photo_url:
+        issues.append("Photo is typically required for Rirekisho format")
+
     # locale-specific quick rules
-    if code == "US":
+    if code == "US" or code == "CA":
         if not r.contact.state:
-            issues.append("Add state in Contact for US resumes")
+            issues.append(f"Add state/province in Contact for {preset['label']} resumes")
+        if r.contact.photo_url:
+            issues.append(f"Remove photo for {preset['label']} resumes (discrimination prevention)")
+    
     if code == "IN":
         if r.contact.phone and not r.contact.phone.strip().startswith("+"):
             issues.append("Include +country code in phone (e.g., +91…)")
+    
+    if code in ["SG", "AE"]:
+        if r.personal_details and not r.personal_details.nationality:
+            issues.append(f"Nationality information important for {preset['label']} resumes")
+    
     if code.startswith("JP"):
         if date_fmt != "YYYY/MM":
             issues.append("Japan presets use YYYY/MM date format")
+    
+    # Canada-specific validation
+    if code == "CA" and r.personal_details:
+        if "English" not in r.personal_details.languages and "French" not in r.personal_details.languages:
+            issues.append("Consider mentioning English/French language proficiency for Canadian resumes")
 
     return ValidateResult(issues=issues, locale=code)
 
@@ -423,34 +876,83 @@ async def get_locales():
     return {
         "locales": [
             {"code": "US", "label": "United States"},
+            {"code": "CA", "label": "Canada"},
             {"code": "EU", "label": "European Union (Europass)"},
             {"code": "AU", "label": "Australia"},
             {"code": "IN", "label": "India"},
+            {"code": "SG", "label": "Singapore"},
+            {"code": "AE", "label": "United Arab Emirates"},
             {"code": "JP-R", "label": "Japan — Rirekisho"},
             {"code": "JP-S", "label": "Japan — Shokumu Keirekisho"},
         ]
     }
 
 @api_router.post("/resumes", response_model=Resume)
-async def create_resume(payload: ResumeCreate):
+async def create_resume(payload: ResumeCreate, request: Request):
+    """Create a new resume. Associates with user if authenticated."""
+    current_user = None
+    # Try to get current user if authorization header is present
+    try:
+        if request.headers.get("authorization"):
+            credentials = HTTPAuthorizationCredentials(
+                scheme="Bearer", 
+                credentials=request.headers.get("authorization").replace("Bearer ", "")
+            )
+            current_user = await get_current_user(credentials)
+    except:
+        # If auth fails, continue without user (for backward compatibility)
+        current_user = None
+    
     data = Resume(**{k: v for k, v in payload.dict(exclude_none=True).items()})
+    
+    # Associate with user if authenticated
+    if current_user:
+        data.user_id = current_user.id
+        data.user_email = current_user.email
+    
     ats = compute_heuristic_score(data)
     doc = data.dict()
     doc["ats"] = ats
-    await db.resumes.insert_one(doc)
+    
+    # Encrypt sensitive fields before storing
+    encrypted_doc = privacy_encryption.encrypt_sensitive_data(doc)
+    await db.resumes.insert_one(encrypted_doc)
+    
     return Resume(**data.dict())
+
+@api_router.get("/resumes", response_model=List[Resume])
+async def list_user_resumes(current_user: User = Depends(get_current_active_user)):
+    """List all resumes for the authenticated user"""
+    cursor = db.resumes.find({"user_id": current_user.id})
+    resumes = []
+    
+    async for doc in cursor:
+        # Decrypt sensitive data before returning
+        decrypted_data = privacy_encryption.decrypt_sensitive_data(doc)
+        resume = Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
+        resumes.append(resume)
+    
+    return resumes
 
 @api_router.put("/resumes/{resume_id}", response_model=Resume)
 async def update_resume(resume_id: str, payload: ResumeCreate):
     existing = await db.resumes.find_one({"id": resume_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Resume not found")
-    merged = {**existing, **payload.dict(exclude_none=True)}
+    
+    # Decrypt existing data for merging
+    decrypted_existing = privacy_encryption.decrypt_sensitive_data(existing)
+    
+    merged = {**decrypted_existing, **payload.dict(exclude_none=True)}
     merged["updated_at"] = datetime.now(timezone.utc).isoformat()
     data = Resume(**{k: v for k, v in merged.items() if k in Resume.model_fields})
     ats = compute_heuristic_score(data)
     merged["ats"] = ats
-    await db.resumes.update_one({"id": resume_id}, {"$set": merged})
+    
+    # Encrypt before storing
+    encrypted_merged = privacy_encryption.encrypt_sensitive_data(merged)
+    await db.resumes.update_one({"id": resume_id}, {"$set": encrypted_merged})
+    
     return data
 
 @api_router.get("/resumes/{resume_id}", response_model=Resume)
@@ -458,15 +960,173 @@ async def get_resume(resume_id: str):
     found = await db.resumes.find_one({"id": resume_id})
     if not found:
         raise HTTPException(status_code=404, detail="Resume not found")
-    return Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    # Decrypt sensitive data before returning
+    decrypted_data = privacy_encryption.decrypt_sensitive_data(found)
+    return Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
 
 @api_router.post("/resumes/{resume_id}/score")
 async def score_resume(resume_id: str):
     found = await db.resumes.find_one({"id": resume_id})
     if not found:
         raise HTTPException(status_code=404, detail="Resume not found")
-    data = Resume(**{k: v for k, v in found.items() if k in Resume.model_fields})
+    
+    # Decrypt sensitive data for scoring
+    decrypted_data = privacy_encryption.decrypt_sensitive_data(found)
+    data = Resume(**{k: v for k, v in decrypted_data.items() if k in Resume.model_fields})
     return compute_heuristic_score(data)
+
+# -----------------------
+# GDPR and Privacy Compliance Routes
+# -----------------------
+@api_router.post("/gdpr/export-my-data")
+async def export_user_data(request: DataExportRequest):
+    """Export all user data for GDPR compliance"""
+    try:
+        export_data = await gdpr_compliance.export_user_data(request.user_identifier)
+        return JSONResponse(
+            content=export_data,
+            headers={
+                "Content-Disposition": f"attachment; filename=atlascv-data-export-{request.user_identifier}-{datetime.now().strftime('%Y%m%d')}.json"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/gdpr/delete-my-data")
+async def delete_user_data(request: DataDeletionRequest):
+    """Delete all user data for GDPR compliance"""
+    try:
+        deletion_result = await gdpr_compliance.delete_user_data(
+            request.user_identifier, 
+            request.confirmation_token
+        )
+        return deletion_result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/privacy/consent", response_model=PrivacyConsentResult)
+async def record_privacy_consent(request: PrivacyConsentInput):
+    """Record user's privacy policy consent"""
+    try:
+        consent_record = await gdpr_compliance.record_privacy_consent(
+            request.user_identifier, 
+            request.dict()
+        )
+        return PrivacyConsentResult(**consent_record)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/privacy/consent/{user_identifier}", response_model=PrivacyConsentResult)
+async def get_privacy_consent(user_identifier: str):
+    """Get user's privacy policy consent status"""
+    try:
+        consent_data = await gdpr_compliance.get_privacy_policy_acceptance(user_identifier)
+        return PrivacyConsentResult(**consent_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/privacy/info/{resume_id}")
+async def get_privacy_info(resume_id: str):
+    """Get privacy information about stored resume data"""
+    try:
+        found = await db.resumes.find_one({"id": resume_id})
+        if not found:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        
+        privacy_info = privacy_encryption.get_privacy_info(found)
+        return {
+            "resume_id": resume_id,
+            "privacy_info": privacy_info,
+            "gdpr_rights": {
+                "data_export": "Available via /api/gdpr/export-my-data",
+                "data_deletion": "Available via /api/gdpr/delete-my-data",
+                "data_portability": "JSON export format supported"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/local-mode/settings")
+async def update_local_mode_settings(settings: LocalModeSettings):
+    """Update local-only mode settings (frontend state management)"""
+    return {
+        "local_mode": settings.enabled,
+        "encryption_enabled": settings.encrypt_local_data,
+        "auto_clear_hours": settings.auto_clear_after_hours,
+        "message": "Local mode settings updated. Data will be managed client-side.",
+        "recommendations": [
+            "Enable local encryption for sensitive data",
+            "Consider periodic data export backups",
+            "Be aware that local data may be lost on browser clear"
+        ]
+    }
+
+# -----------------------
+# Account Cleanup Functions
+# -----------------------
+async def cleanup_inactive_users():
+    """Delete users and their data who have been inactive for more than 1 month"""
+    try:
+        # Calculate cutoff date (1 month ago)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
+        cutoff_iso = cutoff_date.isoformat()
+        
+        # Find inactive users
+        inactive_users_cursor = db.users.find({
+            "$or": [
+                {"last_activity_at": {"$lt": cutoff_iso}},
+                {"last_login_at": {"$lt": cutoff_iso}},
+                {"last_activity_at": None, "last_login_at": None, "created_at": {"$lt": cutoff_iso}}
+            ]
+        })
+        
+        deleted_users = 0
+        deleted_resumes = 0
+        
+        async for user in inactive_users_cursor:
+            user_id = user["id"]
+            user_email = user["email"]
+            
+            # Delete user's resumes
+            resume_result = await db.resumes.delete_many({
+                "$or": [
+                    {"user_id": user_id},
+                    {"user_email": user_email}
+                ]
+            })
+            deleted_resumes += resume_result.deleted_count
+            
+            # Delete user account
+            user_result = await db.users.delete_one({"id": user_id})
+            if user_result.deleted_count > 0:
+                deleted_users += 1
+                
+                # Log the cleanup action
+                await db.cleanup_log.insert_one({
+                    "action": "user_cleanup",
+                    "user_id": user_id,
+                    "user_email": user_email,
+                    "resumes_deleted": resume_result.deleted_count,
+                    "cleanup_date": datetime.now(timezone.utc).isoformat(),
+                    "reason": "inactive_for_1_month"
+                })
+        
+        logger.info(f"Cleanup completed: {deleted_users} users and {deleted_resumes} resumes deleted")
+        return {"deleted_users": deleted_users, "deleted_resumes": deleted_resumes}
+        
+    except Exception as e:
+        logger.error(f"Cleanup failed: {str(e)}")
+        raise e
+
+@api_router.post("/admin/cleanup-inactive-users")
+async def trigger_cleanup_inactive_users(current_user: User = Depends(get_current_active_user)):
+    """Trigger cleanup of inactive users (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await cleanup_inactive_users()
+    return result
 
 # Include the router in the main app
 app.include_router(api_router)
