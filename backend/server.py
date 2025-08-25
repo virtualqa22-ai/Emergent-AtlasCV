@@ -58,6 +58,8 @@ class User(BaseModel):
     full_name: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    last_login_at: Optional[str] = None
+    last_activity_at: Optional[str] = None
     is_active: bool = True
     role: str = "user"  # "user" or "admin"
 
