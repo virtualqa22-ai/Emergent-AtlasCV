@@ -1258,13 +1258,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# ---------------------------
+# Startup / Shutdown
+# ---------------------------
+@app.on_event("startup")
+async def _startup_probe():
+    logger.info(f"🚀 Starting {app.title} v{app.version}")
+    if client is None:
+        logger.error("❌ Mongo client is None; check MONGODB_URI / MONGO_URL env and DB_NAME.")
+        return
+    try:
+        await client.admin.command("ping")
+        logger.info(f"✅ MongoDB ping OK on startup: {_redact_conn(MONGO_URI)}")
+    except Exception as e:
+        logger.exception(f"❌ MongoDB ping failed on startup: {_redact_conn(MONGO_URI)} | error={e}")
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def _shutdown():
+    try:
+        if client:
+            client.close()
+            logger.info("👋 Mongo client closed")
+    except Exception as e:
+        logger.warning(f"Mongo client close warning: {e}")
