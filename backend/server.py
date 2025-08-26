@@ -129,6 +129,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------------------------
+# Health & diagnostics
+# ---------------------------
+@api_router.get("/health")
+async def health():
+    """Lightweight health (does not touch DB)."""
+    return {
+        "ok": True,
+        "service": "AtlasCV backend",
+        "version": app.version,
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+
+@api_router.get("/dbcheck")
+async def dbcheck():
+    """Active DB check with safe error details."""
+    if client is None:
+        msg = "Mongo client not initialized (missing/invalid MONGODB_URI?)"
+        logger.error(f"❌ {msg}")
+        return {"ok": False, "db": DB_NAME, "uri": _redact_conn(MONGO_URI), "error": msg}
+
+    try:
+        await client.admin.command("ping")
+        return {
+            "ok": True,
+            "db": DB_NAME,
+            "uri": _redact_conn(MONGO_URI),
+            "time": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        logger.exception(f"❌ DB ping failed: {_redact_conn(MONGO_URI)} | error={e}")
+        return {"ok": False, "db": DB_NAME, "uri": _redact_conn(MONGO_URI), "error": str(e)}
+
+# Optional root (handy for quick checks)
+@app.get("/")
+async def root():
+    return {"ok": True, "service": "AtlasCV backend", "docs": "/docs", "api": "/api"}
+
 # -----------------------
 # Phase 10: Authentication Models
 # -----------------------
