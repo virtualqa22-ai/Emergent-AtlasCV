@@ -99,22 +99,35 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
-# -----------------------
-# Phase 10: Authentication Configuration
-# -----------------------
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
-
-# Create the main app without a prefix
-app = FastAPI(title="AtlasCV API")
-
-# Create a router with the /api prefix
+# ---------------------------
+# App & API router
+# ---------------------------
+app = FastAPI(title="AtlasCV Backend", version=os.getenv("APP_VERSION", "1.0.0"))
 api_router = APIRouter(prefix="/api")
+
+# ---------------------------
+# CORS
+# ---------------------------
+def _parse_csv_env(name: str, default: List[str]) -> List[str]:
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+CORS_ORIGINS = _parse_csv_env("CORS_ORIGINS", [])
+if CORS_ORIGINS:
+    logger.info(f"🌐 CORS_ORIGINS set: {CORS_ORIGINS}")
+else:
+    logger.warning("🌐 CORS_ORIGINS not set; defaulting to * (development-friendly, not recommended for prod)")
+    CORS_ORIGINS = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # -----------------------
 # Phase 10: Authentication Models
