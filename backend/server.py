@@ -1,18 +1,20 @@
+import os
+import logging
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
+from typing import List, Optional, Dict, Any
+import uuid
+import re
+import jwt
+from pathlib import Path
+
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
-from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Dict, Any
-import uuid
-from datetime import datetime, timezone, timedelta
-import re
-import jwt
 from passlib.context import CryptContext
 from passlib.hash import bcrypt
 
@@ -20,17 +22,71 @@ from passlib.hash import bcrypt
 from encryption_utils import privacy_encryption
 from gdpr_utils import GDPRCompliance
 
+# ---------------------------
+# Logging (inherits uvicorn formatting)
+# ---------------------------
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger("uvicorn.error")
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection (must only use env variables)
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db_name = os.environ.get('DB_NAME', 'test_database')
-db = client[db_name]
+# ---------------------------
+# MongoDB
+# ---------------------------
+def _redact_conn(uri: str) -> str:
+    """Return a safe-to-log version of the URI (no user/pass; show scheme+host+db)."""
+    try:
+        parsed = urlparse(uri)
+        host = parsed.hostname or "unknown-host"
+        port = f":{parsed.port}" if parsed.port else ""
+        db = (parsed.path or "").lstrip("/")
+        db_part = f"/{db}" if db else ""
+        return f"{parsed.scheme}://{host}{port}{db_part}"
+    except Exception:
+        return "mongodb://<redacted>"
+
+def _derive_db_name(uri: str, explicit_db: str | None) -> str:
+    if explicit_db:
+        return explicit_db
+    try:
+        parsed = urlparse(uri)
+        p = (parsed.path or "").lstrip("/")
+        return p if p else "atlascv"
+    except Exception:
+        return "atlascv"
+
+MONGO_URI = os.getenv("MONGODB_URI") or os.getenv("MONGO_URL") or ""
+if not MONGO_URI:
+    logger.error("❌ Mongo URI not set. Define MONGODB_URI (preferred) or MONGO_URL in environment.")
+
+DB_NAME = _derive_db_name(MONGO_URI, os.getenv("DB_NAME"))
+logger.info(f"🗄️  Mongo config: uri={_redact_conn(MONGO_URI or 'mongodb://<unset>')} db={DB_NAME}")
+
+client: AsyncIOMotorClient | None = None
+db = None
+
+def _init_mongo() -> None:
+    global client, db
+    if not MONGO_URI:
+        return
+    try:
+        client = AsyncIOMotorClient(
+            MONGO_URI,
+            serverSelectionTimeoutMS=int(os.getenv("MONGO_SELECT_TIMEOUT_MS", "5000")),
+        )
+        db = client[DB_NAME]
+    except Exception as e:
+        logger.exception(f"❌ Failed to create Mongo client: {_redact_conn(MONGO_URI)} | error={e}")
+        client = None
+
+_init_mongo()
 
 # Initialize GDPR compliance helper
-gdpr_compliance = GDPRCompliance(db)
+gdpr_compliance = GDPRCompliance(db) if db else None
 
 # -----------------------
 # Phase 10: Authentication Configuration
