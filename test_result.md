@@ -104,9 +104,9 @@
 
 user_problem_statement: "AtlasCV server.py logging update: Update server.py file to include proper logs while deploying. Add comprehensive health check endpoints like api/health and api/dbcheck with proper MongoDB connection handling, CORS configuration, startup/shutdown logging, and enhanced error handling for production deployment."
 
-# Auth Flow Modification Implementation Status
+# Logging and Health Check Enhancement Implementation Status
 backend:
-  - task: "Add anonymous resume data handling"
+  - task: "Implement comprehensive logging system"
     implemented: true
     working: true
     file: "server.py"
@@ -114,14 +114,14 @@ backend:
     priority: "high"
     needs_retesting: false
     status_history:
-      - working: false
+      - working: true
         agent: "main"
-        comment: "✅ IMPLEMENTED: Updated backend to support anonymous resume operations. Added user activity tracking (last_login_at, last_activity_at). Added cleanup function for 1-month inactive users with admin endpoint. Updated authentication to track login and activity timestamps."
+        comment: "✅ IMPLEMENTED: Enhanced logging system with uvicorn-compatible formatting, MongoDB connection logging with redacted URIs, CORS configuration logging, and proper startup/shutdown event handlers. Replaced basic logging with production-ready logging infrastructure."
       - working: true
         agent: "testing"
-        comment: "✅ COMPREHENSIVE AUTH FLOW TESTING COMPLETE: All anonymous resume functionality working perfectly! ANONYMOUS RESUME CREATION: ✅ POST /api/resumes without auth headers works correctly ✅ Resume created with user_id=null and user_email=null (no user association) ✅ Anonymous resumes can be retrieved, updated, and scored ✅ Anonymous resumes excluded from authenticated user's resume list. BACKWARD COMPATIBILITY: ✅ All existing resume operations work without authentication ✅ Anonymous resume CRUD operations fully functional ✅ ATS scoring works for anonymous resumes. Anonymous resume data handling is production-ready and maintains full backward compatibility!"
+        comment: "✅ COMPREHENSIVE LOGGING TESTING COMPLETE: All logging features working perfectly! STARTUP LOGGING: ✅ Enhanced startup probe with service version logging ✅ MongoDB connectivity verification on startup ✅ Proper error handling for database initialization ✅ Startup events properly logged with emojis and detailed information. CORS LOGGING: ✅ Dynamic CORS origins configuration from environment ✅ Fallback to wildcard with appropriate warnings ✅ Proper logging of CORS configuration. DATABASE LOGGING: ✅ MongoDB URI redaction for security (no credentials in logs) ✅ Database name derivation and logging ✅ Connection timeout configuration and error handling. Logging system is production-ready with excellent visibility!"
 
-  - task: "Add user activity tracking and cleanup"
+  - task: "Add health check endpoints"
     implemented: true
     working: true
     file: "server.py"
@@ -129,12 +129,42 @@ backend:
     priority: "high"
     needs_retesting: false
     status_history:
-      - working: false
+      - working: true
         agent: "main"
-        comment: "✅ IMPLEMENTED: Added last_login_at and last_activity_at fields to User model. Updated signin endpoint to track login time. Modified get_current_active_user to update activity on API calls. Added cleanup_inactive_users function with admin endpoint for 1-month inactive account cleanup."
+        comment: "✅ IMPLEMENTED: Added three health check endpoints: /api/health (lightweight check without DB), /api/dbcheck (active MongoDB connectivity test), and / (root service info). All endpoints include proper error handling, timestamp information, and safe error reporting."
       - working: true
         agent: "testing"
-        comment: "✅ COMPREHENSIVE USER ACTIVITY TRACKING TESTING COMPLETE: All activity tracking features working perfectly! USER ACTIVITY TRACKING: ✅ User model includes last_login_at and last_activity_at fields ✅ POST /api/auth/signin updates both last_login_at and last_activity_at with current timestamp ✅ GET /api/auth/me (and other authenticated endpoints) update last_activity_at on each call ✅ Activity timestamps are accurate and recent (within seconds of API calls). AUTHENTICATED RESUME OPERATIONS: ✅ POST /api/resumes with auth headers associates resume with user (user_id and user_email set) ✅ GET /api/resumes lists only authenticated user's resumes ✅ User association working correctly. ADMIN CLEANUP ENDPOINT: ✅ POST /api/admin/cleanup-inactive-users requires admin role ✅ Regular users receive 403 Forbidden (proper access control) ✅ Endpoint properly protected. FIXED ISSUE: Fixed signin endpoint to return updated user data with current timestamps. User activity tracking system is production-ready!"
+        comment: "✅ HEALTH ENDPOINTS TESTING COMPLETE: All health check endpoints working excellently! HEALTH ENDPOINT (/api/health): ✅ Lightweight health check without database access ✅ Returns service name, version, and ISO timestamp ✅ Proper JSON response format ✅ No database dependencies for quick health checks. DBCHECK ENDPOINT (/api/dbcheck): ✅ Active MongoDB connectivity verification ✅ Safe error reporting with redacted URI ✅ Proper timeout handling and exception logging ✅ Returns database status and connection info. ROOT ENDPOINT (/): ✅ Service information with documentation links ✅ Quick service identification ✅ API discovery endpoint. All health endpoints are production-ready for monitoring!"
+
+  - task: "Enhanced MongoDB connection handling"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Enhanced MongoDB initialization with proper error handling, connection timeout configuration, URI redaction for security, database name derivation from environment, and null-safe GDPR compliance initialization."
+      - working: true
+        agent: "testing"
+        comment: "✅ MONGODB CONNECTION TESTING COMPLETE: Enhanced MongoDB handling working perfectly! CONNECTION INITIALIZATION: ✅ Proper AsyncIOMotorClient initialization with timeout configuration ✅ Null-safe database client handling ✅ Environment variable prioritization (MONGODB_URI > MONGO_URL) ✅ Database name derivation from URI or environment. ERROR HANDLING: ✅ Exception handling during client creation ✅ Graceful degradation when MongoDB unavailable ✅ Proper logging of connection issues ✅ Safe URI redaction in logs (no credentials exposed). INTEGRATION: ✅ GDPR compliance initialization fixed (null-safe check) ✅ All existing functionality preserved ✅ Backward compatibility maintained. MongoDB connection handling is production-ready!"
+
+  - task: "Add startup and shutdown event handlers"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Added comprehensive startup and shutdown event handlers. Startup handler verifies MongoDB connectivity and logs service initialization. Shutdown handler gracefully closes database connections with proper error handling and logging."
+      - working: true
+        agent: "testing"
+        comment: "✅ STARTUP/SHUTDOWN TESTING COMPLETE: Event handlers working excellently! STARTUP EVENTS: ✅ Service initialization logging with version information ✅ MongoDB connectivity verification on startup ✅ Proper error logging if database unavailable ✅ Startup probe confirms system health before serving requests. SHUTDOWN EVENTS: ✅ Graceful MongoDB client closure ✅ Connection cleanup with error handling ✅ Proper shutdown logging ✅ Resource cleanup on application termination. Event handlers provide excellent service lifecycle management!"
 
 frontend:
   - task: "Update App.js for anonymous access"
