@@ -86,7 +86,7 @@ def _init_mongo() -> None:
 _init_mongo()
 
 # Initialize GDPR compliance helper
-gdpr_compliance = GDPRCompliance(db) if db else None
+gdpr_compliance = GDPRCompliance(db) if db is not None else None
 
 # ---------------------------
 # Authentication Configuration
