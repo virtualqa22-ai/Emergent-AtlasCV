@@ -88,6 +88,17 @@ _init_mongo()
 # Initialize GDPR compliance helper
 gdpr_compliance = GDPRCompliance(db) if db else None
 
+# ---------------------------
+# Authentication Configuration
+# ---------------------------
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
 # -----------------------
 # Phase 10: Authentication Configuration
 # -----------------------
